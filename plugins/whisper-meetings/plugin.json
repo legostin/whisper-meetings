@@ -1,0 +1,66 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "whisper-meetings",
+  "version": "0.2.0",
+  "description": "Record meetings on your Mac, transcribe with local Whisper, and analyze or hand off the results.",
+  "author": {
+    "name": "legostin",
+    "url": "https://github.com/legostin"
+  },
+  "license": "MIT",
+  "keywords": [
+    "meetings",
+    "whisper",
+    "local",
+    "audio",
+    "calendar",
+    "google-meet",
+    "mcp-apps"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Whisper Meetings",
+        "shortDescription": "Local meeting recording and transcription",
+        "longDescription": "Capture your microphone and Mac audio. Transcribe offline using Whisper, then ask Codex to extract decisions, tasks and context for other agents.",
+        "developerName": "legostin",
+        "category": "Productivity",
+        "capabilities": [
+          "Record audio",
+          "Transcribe locally",
+          "Read transcripts",
+          "Save meeting analysis",
+          "Prepare context packages",
+          "Link calendar events"
+        ],
+        "defaultPrompt": [
+          "Open the meeting panel",
+          "Record this meeting with local Whisper transcription",
+          "Analyze my last meeting and link it to a calendar event"
+        ],
+        "websiteURL": "https://github.com/legostin/whisper-meetings",
+        "supportURL": "https://github.com/legostin/whisper-meetings/issues",
+        "privacyPolicyURL": "https://github.com/legostin/whisper-meetings/blob/main/plugins/whisper-meetings/PRIVACY.md",
+        "termsOfServiceURL": "https://github.com/legostin/whisper-meetings/blob/main/plugins/whisper-meetings/TERMS.md",
+        "brandColor": "#202020",
+        "brandColorDark": "#EEEEEE",
+        "composerIcon": "./assets/icon.png",
+        "composerIconDark": "./assets/icon-dark.png",
+        "logo": "./assets/logo.png",
+        "logoDark": "./assets/logo-dark.png"
+      },
+      "onboardingSkill": "./skills/meetings/SKILL.md",
+      "publication": {
+        "release_notes": "0.2.0 prerelease: local recording, offline Whisper, MCP Apps panel, evidence-grounded analysis, explicit handoff and optional calendar event binding. Production-host rendering and live-call capture require further verification.",
+        "translations": {
+          "ru-RU": {
+            "subtitle": "Запись встреч и локальная расшифровка",
+            "description": "Записывайте микрофон и звук Mac, расшифровывайте локально через Whisper, сохраняйте решения с источниками и привязывайте запись к событию календаря. Анализ текста выполняет модель текущего агента."
+          }
+        }
+      }
+    }
+  },
+  "homepage": "https://github.com/legostin/whisper-meetings",
+  "repository": "https://github.com/legostin/whisper-meetings"
+}

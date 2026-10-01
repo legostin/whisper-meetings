@@ -1,0 +1,10 @@
+{
+  "name": "whisper-local",
+  "interface": {"displayName": "Whisper Local"},
+  "plugins": [{
+    "name": "whisper-meetings",
+    "source": {"source": "local", "path": "./plugins/whisper-meetings"},
+    "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+    "category": "Productivity"
+  }]
+}

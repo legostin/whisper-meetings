@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store
+dist/
+!plugins/whisper-meetings/web/dist/
+!plugins/whisper-meetings/web/dist/widget.html
+node_modules/
+output/
