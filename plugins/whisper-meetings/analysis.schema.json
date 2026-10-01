@@ -71,6 +71,32 @@
       ],
       "title": "Evidence",
       "type": "object"
+    },
+    "Overview": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "points": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Points",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "points"
+      ],
+      "title": "Overview",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -79,6 +105,14 @@
       "minLength": 1,
       "title": "Summary",
       "type": "string"
+    },
+    "overview": {
+      "items": {
+        "$ref": "#/$defs/Overview"
+      },
+      "maxItems": 8,
+      "title": "Overview",
+      "type": "array"
     },
     "decisions": {
       "items": {

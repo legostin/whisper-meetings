@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "whisper-meetings",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Record meetings on your Mac, transcribe with local Whisper, and analyze or hand off the results.",
   "author": {
     "name": "legostin",
@@ -22,7 +22,7 @@
       "interface": {
         "displayName": "Whisper Meetings",
         "shortDescription": "Local meeting recording and transcription",
-        "longDescription": "Capture your microphone and Mac audio. Transcribe offline using Whisper, then ask Codex to extract decisions, tasks and context for other agents.",
+        "longDescription": "Record microphone audio by default; confirm headphones to include Mac playback. Transcribe offline with Whisper, then ask Codex for concise themed reports, decisions, tasks and context for other agents.",
         "developerName": "legostin",
         "category": "Productivity",
         "capabilities": [
@@ -53,11 +53,11 @@
       },
       "onboardingSkill": "./skills/meetings/SKILL.md",
       "publication": {
-        "release_notes": "0.3.0 prerelease: optional local Core ML speaker diarization, overlap/uncertainty flags, user speaker aliases and Russian language selection. Public model setup requires no account or token. Production-host mounting and live-call capture remain unverified.",
+        "release_notes": "0.4.0 prerelease: headphones checkbox; default microphone-only AVAudioEngine recording; concise themed reports without visible segment references. Evidence stays in JSON. Live capture and production-host panel mounting remain unverified.",
         "translations": {
           "ru-RU": {
             "subtitle": "Запись встреч и локальная расшифровка",
-            "description": "Записывайте микрофон и звук Mac, расшифровывайте локально через Whisper, сохраняйте решения с источниками и привязывайте запись к событию календаря. Анализ текста выполняет модель текущего агента."
+            "description": "Записывайте микрофон; с наушниками добавляйте звук Mac. Расшифровывайте локально через Whisper, получайте структурированные отчёты без ссылок на реплики и привязывайте запись к событию календаря. Анализ текста выполняет текущий агент."
           }
         }
       }

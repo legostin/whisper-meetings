@@ -9,7 +9,7 @@ Use the `whisper_meetings` MCP tools for capture and transcription. If unavailab
 
 ## Record and stop
 
-- For "начни запись встречи" / "start recording", call `meetings_doctor` then `meetings_start`. Default: microphone AND all Mac system audio, model `small`, automatic language detection, local transcription after stop. A title is optional. Tell the user recording includes other Mac playback and headphones help prevent microphone echo.
+- For "начни запись встречи" / "start recording", call `meetings_doctor` then `meetings_start`. Default: microphone only (`headphones=false`), model `small`, automatic language detection, transcription after stop. Set `headphones=true` only if the user has confirmed headphones; that records microphone AND all Mac playback. Never infer headphones from a previous call or device name. Explain that without headphones remote voices must be audible through speakers; muted/quiet speakers may be missed. A title is optional.
 - Record only on a direct user recording request. Preparing or installing the plugin does not itself authorize starting a real recording. Never start capture automatically when a chat opens or the plugin is enabled.
 - A `starting` result means capture is waiting to start, possibly for macOS permissions. Report this state truthfully. Use `meetings_status` to confirm `recording`. If permissions are denied, explain the actual error and the relevant macOS setting.
 - For "останови запись", call `meetings_stop`. `stopping`, `queued`, `transcribing` are unfinished states. Read status to distinguish `recorded` (audio only), `ready` (transcript complete), and `failed`/`interrupted`.
@@ -30,7 +30,7 @@ Use the `whisper_meetings` MCP tools for capture and transcription. If unavailab
 
 1. Choose the requested meeting using `meetings_list` and wait for `ready`.
 2. Read all transcript pages with `meetings_read_transcript`, following `next_offset`. If full coverage is not possible, label analysis as partial and do not save it as a complete meeting analysis.
-3. Extract summary, decisions, action items, risks and open questions. Cite stable segment IDs. Use null for owners and deadlines that were not actually stated. Microphone/system labels are channels. Optional speaker IDs are estimates scoped to this meeting/channel; names are user-supplied aliases, not verified identities. Never assign ambiguous/overlapping text to a single speaker, or infer task ownership from a voice label alone. Call out uncertain recognition when it matters.
+3. Write a short summary of 1–2 sentences, then `overview` thematic sections (`title`, 2–5 short `points` each), followed by decisions, action items, risks and open questions. Do not duplicate the full report in its opening. Do not show recording links, timestamps or segment IDs in report text or the final chat response. Keep evidence IDs only in structured `evidence_segment_ids` metadata. Use null for owners and deadlines that were not actually stated. Microphone/system labels are channels. Optional speaker IDs are estimates scoped to this meeting/channel; names are user-supplied aliases, not verified identities. Never assign ambiguous/overlapping text to a single speaker, or infer task ownership from a voice label alone. Call out uncertain recognition when it matters.
 4. Use `meetings_save_analysis` to save the structured result as Markdown/JSON. Pass the `sha256` from the transcript as `transcript_sha256` so a reprocessed transcript cannot silently invalidate the analysis. Every entry requires `text` and a nonempty `evidence_segment_ids` list. Action items also require nullable `owner` and `due_date`. Empty categories use `[]`.
 5. Provide clickable artifact links and a concise result.
 
@@ -38,7 +38,7 @@ Whisper transcription runs locally. The current Codex agent analyzes text using 
 
 ## Transfer context
 
-- Use `meetings_prepare_handoff` to create a local Markdown/JSON package for a named area (engineering, product, sales, research, etc.), including summary, relevant decisions, evidence and a concrete task brief. Include the transcript only if necessary or requested.
+- Use `meetings_prepare_handoff` to create a local Markdown/JSON package for a named area (engineering, product, sales, research, etc.), including summary, themed points, relevant decisions and a concrete task brief. Human-readable reports omit segment references; structured JSON preserves evidence metadata. Include the transcript only if necessary or requested.
 - The tool creates files; it does not send messages or start other agents. Clearly distinguish a prepared package from a delivered message.
 - Write into another project's directory only when the user selected that destination. By default save in the meeting's own `handoffs/` directory.
 - If the user explicitly names and authorizes messaging another Codex chat, use the host's available chat tools with the package context. If the target is missing, prepare the package and ask which destination to use. Do not promise autonomous cross-chat routing unsupported by the host.

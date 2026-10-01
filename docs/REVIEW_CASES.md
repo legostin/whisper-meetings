@@ -4,6 +4,8 @@ These are repeatable cases for preparing a future OpenAI submission. No reviewer
 
 | Positive scenario | Prompt / UI action | Expected tools | Expected behavior | Current evidence |
 |---|---|---|---|---|
+| Headphone choice | Start a simulated meeting with headphones unchecked/checked | meetings_start, meetings_stop | Only microphone by default; microphone + Mac when checked; selection locked during recording | Native PCM writer + routing tests; SDK preview passed; live devices pending |
+| Readable report | Analyze/save and read report | meetings_save_analysis, meetings_read_analysis | Short opening, themed points, no visible recording references; evidence kept internally | Source/installed smoke, export tests and SDK preview passed |
 | Open controls | Open the meeting panel | meetings_open_panel, app-only meetings_panel_state | UI opens without recording or uploading audio | Protocol + SDK preview verified; production host pending |
 | Import speech offline | Transcribe the supplied synthetic audio file | meetings_import, meetings_status, meetings_read_transcript | Reconnect survives; ready transcript cites timed segments | Real installed MCP smoke passed offline |
 | Russian + speakers | Import synthetic Russian speech with automatic language and diarize=true | meetings_import, meetings_status, meetings_read_transcript, meetings_rename_speaker | Local ASR detects ru; local speaker estimates are returned; user alias follows exports | Real source and installed 0.3 MCP smoke with local native helper passed |

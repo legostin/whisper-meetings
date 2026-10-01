@@ -20,7 +20,11 @@ def run(meeting_id, mode):
         try:
             if mode == "capture":
                 with (directory / "capture.log").open("ab") as log:
-                    process = subprocess.Popen([str(capture_binary()), str(directory)], stdin=subprocess.DEVNULL, stdout=log, stderr=log)
+                    command = [str(capture_binary()), str(directory)]
+                    # Legacy recordings retain the sources selected by the old version.
+                    if item.get('capture_sources', ['microphone', 'system']) == ['microphone']:
+                        command.append('--microphone-only')
+                    process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=log, stderr=log)
                     announced = False
                     started = time.monotonic()
                     while process.poll() is None:

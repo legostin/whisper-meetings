@@ -1,8 +1,8 @@
 # Whisper Meetings
 
-Local microphone + Mac audio recording, offline Whisper transcription, and an MCP Apps meeting workspace for Codex. Optional Calendar/Meet event binding uses minimal metadata explicitly supplied by the user or host. Current-agent analysis and cross-chat delivery depend on host capabilities.
+Local microphone recording (plus Mac audio when headphones are confirmed), offline Whisper transcription, and an MCP Apps meeting workspace for Codex. Optional Calendar/Meet event binding uses minimal metadata explicitly supplied by the user or host. Current-agent analysis and cross-chat delivery depend on host capabilities.
 
-This is an independent macOS 15+ project, not an official OpenAI, Apple, Google or Zoom product. Version 0.3.0 is a prerelease; see the repository's validation notes for tested behavior and limitations.
+This is an independent macOS 15+ project, not an official OpenAI, Apple, Google or Zoom product. Version 0.4.0 is a prerelease; see the repository's validation notes for tested behavior and limitations.
 
 ## Setup
 
@@ -24,7 +24,7 @@ This builds a pinned native FluidAudio helper and downloads public Community-1-d
 
 The host starts `mcp.json` over stdio. Opening the panel never starts recording. Ask “Open the meeting panel”, “Start recording this meeting”, “Stop without transcription”, or “Analyze the last meeting”. Stop an active recording before uninstalling or disabling the plugin; detached jobs survive MCP reconnects. Maximum capture duration is twelve hours.
 
-All Mac playback is captured, not only the conference app. Headphones help avoid echo. Channel labels are not speaker identities. Transcripts can be incorrect, especially with overlapping voices. Streamed live captions are not included. Optional local Core ML diarization estimates speakers and preserves overlap intervals; names are user-supplied aliases scoped to one meeting/channel.
+The unchecked headphones checkbox records microphone only via AVAudioEngine. Speakers must be audible for remote voices to reach the microphone. Confirming headphones enables microphone + all Mac playback, including other apps. Microphone-only mode does not request screen recording permission. Channel labels are not speaker identities. Transcripts can be incorrect, especially with overlapping voices. Streamed live captions are not included. Optional local Core ML diarization estimates speakers and preserves overlap intervals; names are user-supplied aliases scoped to one meeting/channel.
 
 Calendar binding is optional. The server never reads/writes Google Calendar or stores Google credentials. A connected host integration can obtain events on an explicit request; the user selects which metadata to attach. Attaching an event does not join Meet or begin capture. The same metadata can be supplied directly without a connector.
 
@@ -32,3 +32,5 @@ Audio stays local. Text read/analyzed by the current agent is processed under th
 
 Full installation, development and validation: [repository](https://github.com/legostin/whisper-meetings).
 [Privacy policy](PRIVACY.md) · [Usage terms](TERMS.md) · [Support](https://github.com/legostin/whisper-meetings/issues).
+
+Reports use a short opening and themed bullet sections, followed by decisions, tasks, risks and open questions. Recording links and segment IDs are omitted from the UI and human-readable reports; evidence metadata remains in structured JSON. `scripts/refresh_reports.py` reformats existing local Markdown reports without modifying their JSON or audio.

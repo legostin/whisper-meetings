@@ -152,7 +152,7 @@ def spawn(meeting_id, mode):
                          stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
 
 
-def create(title, kind, model, language, transcribe_on_stop, source_file=None, calendar_event=None, diarize=False):
+def create(title, kind, model, language, transcribe_on_stop, source_file=None, calendar_event=None, diarize=False, headphones=False):
     if not title.strip() or len(title) > 240:
         raise ValueError("title must contain 1..240 characters")
     model_path(model)
@@ -169,6 +169,8 @@ def create(title, kind, model, language, transcribe_on_stop, source_file=None, c
                 "state": "starting" if kind == "capture" else "queued", "directory": str(directory),
                 "model": model, "language": language, "transcribe_on_stop": transcribe_on_stop,
                 "tracks": {}, "error": None, "diarize_on_stop": diarize, "diarization_status": "pending" if diarize else "disabled"}
+        if kind == 'capture':
+            item.update(headphones=headphones, capture_sources=['microphone', 'system'] if headphones else ['microphone'])
         if calendar_event:
             item["calendar_event"] = calendar_event
         if source_file:
@@ -187,7 +189,7 @@ def create(title, kind, model, language, transcribe_on_stop, source_file=None, c
     return item
 
 
-def start(title="Встреча", model="small", language=None, transcribe_on_stop=True, calendar_event=None, diarize=False):
+def start(title="Встреча", model="small", language=None, transcribe_on_stop=True, calendar_event=None, diarize=False, headphones=False):
     if sys.platform != "darwin" or not capture_binary().is_file():
         raise ValueError("Recording needs macOS 15+ and the native helper. Run scripts/setup.py.")
     if transcribe_on_stop:
@@ -195,7 +197,7 @@ def start(title="Встреча", model="small", language=None, transcribe_on_st
     if diarize:
         from diarization import require_available
         require_available()
-    item = create(title, "capture", model, language, transcribe_on_stop, calendar_event=calendar_event, diarize=diarize)
+    item = create(title, "capture", model, language, transcribe_on_stop, calendar_event=calendar_event, diarize=diarize, headphones=headphones)
     # Return actual capture status, never claim recording merely because spawned.
     for _ in range(30):
         item = get(item["id"])
@@ -380,19 +382,27 @@ def save_analysis(meeting_id, analysis, transcript_sha256):
                 raise ValueError("Analysis references an unknown transcript segment")
     analysis = {**analysis, "meeting_id": meeting_id, "created_at": now(), "transcript_sha256": transcript_sha256}
     atomic_json(directory / "analysis.json", analysis)
-    lines = [f"# {item['title']}", "", analysis["summary"], ""]
+    write_report(item, analysis)
+    return {"json": str(directory / "analysis.json"), "markdown": str(directory / "analysis.md")}
+
+
+def write_report(item, analysis):
+    """Refresh presentation without changing source data or its evidence/hash."""
+    import reporting
+    directory = Path(item['directory'])
+    lines = [f"# {item['title']}", "", *reporting.introduction(analysis)]
+    report = reporting.view(analysis)
     for key, title in (("decisions", "Решения"), ("action_items", "Задачи"), ("risks", "Риски"), ("open_questions", "Открытые вопросы")):
         lines += [f"## {title}", ""]
-        for entry in analysis[key]:
+        for entry in report[key]:
             suffix = ""
             if key == "action_items":
                 suffix = f" — {entry['owner'] or 'владелец не указан'}; {entry['due_date'] or 'срок не указан'}"
-            lines.append(f"- {entry['text']}{suffix} (источники: {', '.join(entry['evidence_segment_ids'])})")
+            lines.append(f"- {entry['text']}{suffix}")
         if not analysis[key]:
             lines.append("Нет зафиксированных пунктов.")
         lines.append("")
     (directory / "analysis.md").write_text("\n".join(lines), encoding="utf-8")
-    return {"json": str(directory / "analysis.json"), "markdown": str(directory / "analysis.md")}
 
 
 def handoff(meeting_id, area, brief, include_transcript=False, destination_directory=None):
@@ -440,13 +450,14 @@ def handoff(meeting_id, area, brief, include_transcript=False, destination_direc
         lines += ["", "## Speaker attribution", "", payload["speaker_note"]]
         lines += [f"- {speaker['id']}: {speaker.get('name') or 'unnamed'} (user-supplied alias; {speaker['source']})" for speaker in payload["speakers"]]
     if payload.get("analysis"):
-        saved = payload["analysis"]
-        lines += ["", "## Summary", "", saved["summary"]]
+        import reporting
+        saved = reporting.view(payload["analysis"])
+        lines += ["", *reporting.introduction(saved, 'Summary')]
         for key, heading in (("decisions", "Decisions"), ("action_items", "Action items"), ("risks", "Risks"), ("open_questions", "Open questions")):
             lines += ["", f"## {heading}", ""]
             for entry in saved[key]:
                 details = f" — {entry['owner'] or 'owner not stated'}; {entry['due_date'] or 'due date not stated'}" if key == "action_items" else ""
-                lines.append(f"- {entry['text']}{details} (sources: {', '.join(entry['evidence_segment_ids'])})")
+                lines.append(f"- {entry['text']}{details}")
             if not saved[key]:
                 lines.append("No recorded items.")
     if include_transcript:

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 2026-10-01
+
+- Unchecked headphones checkbox defaults new recordings to microphone only through AVAudioEngine; headphones enable microphone + Mac playback. The source choice is frozen while recording.
+- Short report summary and themed bullet sections; legacy long summaries are presented as readable points.
+- Removed segment links/IDs from report UI and Markdown; structured JSON retains evidence validation.
+- Explicit local report-format refresh, preserving source JSON/audio.
+- Added capture-routing/report regression tests and a native synthetic microphone-writer check.
+
 ## 0.3.0 — 2026-10-01
 
 - Optional native Core ML speaker diarization with a pinned public FluidAudio SDK/model snapshot; no account, Hugging Face token or API key required.

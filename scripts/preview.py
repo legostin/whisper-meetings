@@ -6,9 +6,12 @@ from pathlib import Path
 import argparse
 import json
 import secrets
+import sys
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'plugins/whisper-meetings'))
+import reporting
 TOKEN = secrets.token_urlsafe(24)
 MEETINGS = [
  {"id":"demo-planning","title":"Планирование продукта","state":"ready","created_at":"2026-10-01T08:30:00Z","directory":"/demo/meetings/planning","model":"small","transcribe_on_stop":True},
@@ -28,7 +31,7 @@ SEGMENTS = [
 for segment in SEGMENTS:
     segment.update(speaker_id=segment['source']+':A',speaker_ids=[segment['source']+':A'],overlapping_speech=False,speaker_assignment='estimated')
 SEGMENTS[-1].update(speaker_id=None,speaker_ids=['system:A','system:B'],overlapping_speech=True,speaker_assignment='uncertain')
-ANALYSIS = {"summary":"Команда согласовала запуск первой версии в пятницу. Перед релизом нужно проверить установку и надёжность записи; сроки экспорта в другие чаты ещё обсуждаются.","decisions":[{"text":"Запустить первую версию с записью и расшифровкой в пятницу.","evidence_segment_ids":["s00001","s00002"]}],"action_items":[{"text":"Подготовить инструкцию по установке и проверить её на чистом Mac.","owner":None,"due_date":None,"evidence_segment_ids":["s00002"]}],"risks":[{"text":"Разрешения macOS и восстановление после сбоя требуют проверки до релиза.","evidence_segment_ids":["s00003"]}],"open_questions":[{"text":"Включать ли экспорт в другие чаты в первую версию?","evidence_segment_ids":["s00004"]}],"transcript_sha256":"demo-sha"}
+ANALYSIS = {"summary":"Команда согласовала запуск первой версии в пятницу.","overview":[{"title":"Что входит в первую версию","points":["Запись встречи и локальная расшифровка.","Выбор источников звука в зависимости от наушников."]},{"title":"Что нужно до релиза","points":["Проверить установку на чистом Mac.","Проверить разрешения и восстановление записи после сбоя."]}],"decisions":[{"text":"Запустить первую версию с записью и расшифровкой в пятницу.","evidence_segment_ids":["s00001","s00002"]}],"action_items":[{"text":"Подготовить инструкцию по установке и проверить её на чистом Mac.","owner":None,"due_date":None,"evidence_segment_ids":["s00002"]}],"risks":[{"text":"Разрешения macOS и восстановление после сбоя требуют проверки до релиза.","evidence_segment_ids":["s00003"]}],"open_questions":[{"text":"Включать ли экспорт в другие чаты в первую версию?","evidence_segment_ids":["s00004"]}],"transcript_sha256":"demo-sha"}
 CALLS = []
 
 def invoke(name, args):
@@ -39,15 +42,15 @@ def invoke(name, args):
         return {"setup":{"capture_available":True,"models":["small","base"],"permissions":{"microphone":"authorized","screen_audio":True},"data_directory":"/demo/local-archive","diarization":{"available":True,"model_installed":True,"account_required":False}},"meetings":MEETINGS,"calendar":{"events":[EVENT],"updated_at":"2026-10-01T08:00:00Z"}}
     if name=='meetings_read_transcript':
         return {"segments":SEGMENTS[args.get('offset',0):args.get('offset',0)+args.get('limit',100)],"total_segments":len(SEGMENTS),"next_offset":None,"sha256":SHA,"speakers":SPEAKERS,"diarization":{"status":"complete","note":"Synthetic speaker estimates; no identities inferred"}}
-    if name=='meetings_read_analysis':return {"analysis":ANALYSIS if item['id']=='demo-planning' and SHA=='demo-sha' else None}
+    if name=='meetings_read_analysis':return {"analysis":reporting.view(ANALYSIS) if item['id']=='demo-planning' and SHA=='demo-sha' else None}
     if name=='meetings_diarize':item.update(state='ready',diarization_status='complete');return item
     if name=='meetings_rename_speaker':
         speaker=next(s for s in SPEAKERS if s['id']==args['speaker_id']);speaker['name']=args['name'];SHA='demo-sha-renamed';item['transcript_sha256']=SHA;return {'speaker_id':speaker['id'],'name':speaker['name'],'transcript_sha256':SHA}
     if name=='meetings_start':
         if any(m['state']=='recording' for m in MEETINGS):raise ValueError('Demo recording already active')
-        item={"id":"demo-active","title":args['title'],"state":"recording","created_at":datetime.now(timezone.utc).isoformat(),"started_at":datetime.now(timezone.utc).isoformat(),"model":args['model'],"transcribe_on_stop":args['transcribe_on_stop'],"diarize_on_stop":args.get('diarize',False),"language":args.get('language')}
+        item={"id":"demo-active-"+secrets.token_hex(4),"title":args['title'],"state":"recording","created_at":datetime.now(timezone.utc).isoformat(),"started_at":datetime.now(timezone.utc).isoformat(),"model":args['model'],"transcribe_on_stop":args['transcribe_on_stop'],"diarize_on_stop":args.get('diarize',False),"language":args.get('language')}
         if args.get('calendar_event_id'):item['calendar_event']=EVENT
-        MEETINGS.insert(0,item);return item
+        item.update(headphones=args.get('headphones',False),capture_sources=['microphone','system'] if args.get('headphones',False) else ['microphone']);MEETINGS.insert(0,item);return item
     if name=='meetings_stop':item['state']='ready' if args.get('transcribe',item['transcribe_on_stop']) else 'recorded';return item
     if name=='meetings_set_transcription':item['transcribe_on_stop']=args['enabled'];return item
     if name=='meetings_transcribe':item['state']='ready';return item

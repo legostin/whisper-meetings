@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 import meetings
 import calendar_links
 import diarization
+import reporting
 from calendar_links import CalendarEvent
 
 os.umask(0o077)
@@ -25,7 +26,7 @@ def meetings_panel() -> str:
           annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
 def meetings_open_panel() -> dict:
     """Open the interactive Whisper Meetings panel. Opening it does not start recording or send meeting text to the model."""
-    return {"version": "0.3.0", "panel": PANEL_URI}
+    return {"version": "0.4.0", "panel": PANEL_URI}
 
 
 @mcp.tool(meta={"ui": {"visibility": ["app"]}},
@@ -46,7 +47,7 @@ def meetings_read_analysis(meeting_id: str) -> dict:
     transcript = json.loads((directory / "transcript.json").read_text())
     if analysis.get("transcript_sha256") != transcript["sha256"]:
         return {"analysis": None, "stale": True}
-    return {"analysis": analysis}
+    return {"analysis": reporting.view(analysis)}
 
 
 class Evidence(BaseModel):
@@ -60,9 +61,16 @@ class Action(Evidence):
     due_date: str | None
 
 
+class Overview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str = Field(min_length=1, max_length=100)
+    points: list[str] = Field(min_length=1, max_length=6)
+
+
 class Analysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
     summary: str = Field(min_length=1)
+    overview: list[Overview] = Field(default_factory=list, max_length=8)
     decisions: list[Evidence]
     action_items: list[Action]
     risks: list[Evidence]
@@ -76,10 +84,10 @@ def meetings_doctor() -> dict:
 
 
 @mcp.tool(annotations={'readOnlyHint': False, 'destructiveHint': False, 'openWorldHint': False})
-def meetings_start(title: str = "Встреча", model: str = "small", language: str | None = None, transcribe_on_stop: bool = True, calendar_event_id: str | None = None, calendar_id: str = "primary", diarize: bool = False) -> dict:
-    """Start recording microphone AND Mac system audio, only when the user asks. Captures all Mac playback (including Zoom/Meet); headphones recommended to avoid echo. Returns starting while macOS permission is pending, or recording once capture begins. A detached local worker survives MCP reconnects. Default: transcribe locally after stop; max recording 12 hours."""
+def meetings_start(title: str = "Встреча", model: str = "small", language: str | None = None, transcribe_on_stop: bool = True, calendar_event_id: str | None = None, calendar_id: str = "primary", diarize: bool = False, headphones: bool = False) -> dict:
+    """Start recording only on a direct user request. Default headphones=false captures microphone only; loudspeaker voices may be captured acoustically. Set headphones=true only when the user confirms headphones: then capture microphone AND all Mac playback. Returns starting or recording; poll status. Local transcription after stop; max 12 hours. Detached worker survives reconnects."""
     event = calendar_links.resolve(calendar_id, calendar_event_id) if calendar_event_id else None
-    return meetings.start(event["title"] if event and title == "Встреча" else title, model, language, transcribe_on_stop, event, diarize)
+    return meetings.start(event["title"] if event and title == "Встреча" else title, model, language, transcribe_on_stop, event, diarize, headphones)
 
 
 @mcp.tool(annotations={'readOnlyHint': False, 'destructiveHint': True, 'openWorldHint': False})
@@ -128,7 +136,7 @@ def meetings_read_transcript(meeting_id: str, offset: int = 0, limit: int = 100)
 
 @mcp.tool(annotations={'readOnlyHint': False, 'destructiveHint': True, 'openWorldHint': False})
 def meetings_save_analysis(meeting_id: str, transcript_sha256: str, analysis: Analysis) -> dict:
-    """Save the agent's evidence-grounded meeting analysis as Markdown and JSON. Every decision/task/risk/question needs transcript segment IDs. Use null for unstated owner/date. Replaces any previously saved analysis. The tool persists supplied analysis; Whisper itself does not analyze meetings."""
+    """Save a readable meeting report and structured JSON. summary: 1–2 short sentences; overview: thematic sections with short bullet points. No segment IDs, timestamps or recording links in visible text. Every decision/task/risk/question keeps evidence_segment_ids as internal metadata. Use null for unstated owner/date. Replaces saved analysis; Whisper does not generate it."""
     return meetings.save_analysis(meeting_id, analysis.model_dump(), transcript_sha256)
 
 
