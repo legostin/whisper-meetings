@@ -16,6 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", choices=["tiny", "base", "small", "medium", "large-v3", "turbo"], default="small")
     parser.add_argument("--skip-model", action="store_true")
+    parser.add_argument("--diarization", action="store_true", help="Install optional native speaker processing and public Core ML models; no account required")
     args = parser.parse_args()
     if sys.platform != "darwin" or int(platform.mac_ver()[0].split(".")[0]) < 15:
         parser.error("Recording requires macOS 15+. File transcription code can run on other platforms.")
@@ -37,6 +38,12 @@ def main():
     subprocess.run(["codesign", "--force", "--sign", "-", "--identifier", "in.legost.whisper-meetings.capture", str(binary)], check=True)
     if not args.skip_model:
         subprocess.run([str(runtime / ".venv/bin/python"), str(PLUGIN / "scripts/download_model.py"), args.model], check=True)
+    if args.diarization:
+        if architecture != 'arm64':
+            parser.error('Optional Core ML diarization currently requires an Apple Silicon Mac.')
+        from build_diarization import build
+        build(PLUGIN, runtime)
+        subprocess.run([str(runtime / ".venv/bin/python"), str(PLUGIN / "scripts/download_diarization.py")], check=True)
     print("Setup complete. Data:", home)
     subprocess.run([str(binary), "--check"], check=True)
 

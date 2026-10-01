@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-10-01
+
+- Optional native Core ML speaker diarization with a pinned public FluidAudio SDK/model snapshot; no account, Hugging Face token or API key required.
+- Track-scoped speaker estimates, regular overlap-preserving time intervals, conservative segment/word attribution and explicit ambiguity/echo flags.
+- User-supplied speaker aliases propagated to exports/handoffs; renaming or reprocessing invalidates previous analysis.
+- Background postprocessing of ready recordings and preservation of successful ASR if optional processing fails.
+- Russian/English/automatic speech-language controls independent of interface language.
+- Additional concurrency, overlap, attribution, export and failure-recovery tests.
+
 ## 0.2.0 — 2026-10-01
 
 - MCP Apps panel with compact inline recording controls and a full meeting workspace.

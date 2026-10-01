@@ -8,3 +8,6 @@ dist/
 !plugins/whisper-meetings/web/dist/widget.html
 node_modules/
 output/
+
+.build/
+.swiftpm/

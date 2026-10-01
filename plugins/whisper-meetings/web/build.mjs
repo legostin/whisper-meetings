@@ -16,7 +16,7 @@ writeFileSync(resolve(dir, 'dist/widget.html'), template.replace('/* WIDGET_STYL
 console.log('Built self-contained widget.html');
 
 const lock = JSON.parse(readFileSync(resolve(dir, 'package-lock.json'), 'utf8'));
-const notices = ['# Third-party notices', '', 'The self-contained UI uses the following open-source packages. Build-only esbuild is not redistributed. Python dependencies and Whisper models are downloaded during explicit setup and retain their own licenses.', ''];
+const notices = ['# Third-party notices', '', 'The self-contained UI uses the following open-source packages. Build-only esbuild is not redistributed. Python dependencies and Whisper models are downloaded during explicit setup and retain their own licenses.', '', 'Optional diarization setup downloads FluidAudio source (Apache-2.0) and public FluidInference Community-1-derived Core ML assets (selected modern artifacts: CC-BY-4.0). The SDK, native binary and model weights are not bundled in this source ZIP. Setup retains SDK licenses and the model LICENSE, NOTICE.md, PROVENANCE.md and pinned revision/checksums alongside the local installation. Sources: https://github.com/FluidInference/FluidAudio and https://huggingface.co/FluidInference/speaker-diarization-coreml.', ''];
 for (const [path, pkg] of Object.entries(lock.packages)) {
   if (!path || pkg.dev) continue;
   const license = ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'license', 'license.md', 'LICENSE-MIT', 'COPYING'].map(name => resolve(deps, path, name)).find(existsSync);

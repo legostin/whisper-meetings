@@ -2,6 +2,8 @@
 
 The self-contained UI uses the following open-source packages. Build-only esbuild is not redistributed. Python dependencies and Whisper models are downloaded during explicit setup and retain their own licenses.
 
+Optional diarization setup downloads FluidAudio source (Apache-2.0) and public FluidInference Community-1-derived Core ML assets (selected modern artifacts: CC-BY-4.0). The SDK, native binary and model weights are not bundled in this source ZIP. Setup retains SDK licenses and the model LICENSE, NOTICE.md, PROVENANCE.md and pinned revision/checksums alongside the local installation. Sources: https://github.com/FluidInference/FluidAudio and https://huggingface.co/FluidInference/speaker-diarization-coreml.
+
 ## @modelcontextprotocol/client 2.2.0
 
 The MCP project is undergoing a licensing transition from the MIT License to the Apache License, Version 2.0 ("Apache-2.0"). All new code and specification contributions to the project are licensed under Apache-2.0. Documentation contributions (excluding specifications) are licensed under CC-BY-4.0.

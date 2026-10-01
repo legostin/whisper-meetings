@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parent
 ACTIVE = ("starting", "recording", "stopping")
-RUNNING = (*ACTIVE, "queued", "transcribing")
+RUNNING = (*ACTIVE, "queued", "transcribing", "diarizing")
 
 
 def now():
@@ -98,7 +98,10 @@ def reconcile(db):
         item = decode(row)
         age = (datetime.now(timezone.utc) - datetime.fromisoformat(item["updated_at"])).total_seconds()
         if item["state"] in RUNNING and age > 30 and not worker_alive(item["directory"]):
-            item.update(state="interrupted", error="The worker exited unexpectedly. Audio remains on disk; retry transcription.")
+            if item['state'] == 'diarizing' and (Path(item['directory']) / 'transcript.json').is_file():
+                item.update(state='ready', diarization_status='failed', diarization_error='The speaker worker exited. Transcript retained; retry diarization.')
+            else:
+                item.update(state="interrupted", error="The worker exited unexpectedly. Audio remains on disk; retry transcription.")
             save(db, item)
 
 
@@ -128,6 +131,7 @@ def require_model(model):
 
 
 def doctor():
+    from diarization import availability
     binary = capture_binary()
     permissions = {"error": "Native helper is not installed; run scripts/setup.py"}
     if binary.exists():
@@ -137,6 +141,7 @@ def doctor():
             "capture_available": binary.is_file(), "permissions": permissions,
             "models": sorted(p.parent.name for p in (data_home() / "models").glob("*/model.bin")),
             "transcription": "local CPU int8 faster-whisper; no audio uploaded",
+            "diarization": availability(),
             "analysis": "Performed by the current Codex agent; text is visible to that agent"}
 
 
@@ -147,7 +152,7 @@ def spawn(meeting_id, mode):
                          stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
 
 
-def create(title, kind, model, language, transcribe_on_stop, source_file=None, calendar_event=None):
+def create(title, kind, model, language, transcribe_on_stop, source_file=None, calendar_event=None, diarize=False):
     if not title.strip() or len(title) > 240:
         raise ValueError("title must contain 1..240 characters")
     model_path(model)
@@ -163,7 +168,7 @@ def create(title, kind, model, language, transcribe_on_stop, source_file=None, c
         item = {"id": identity, "title": title.strip(), "kind": kind, "created_at": now(),
                 "state": "starting" if kind == "capture" else "queued", "directory": str(directory),
                 "model": model, "language": language, "transcribe_on_stop": transcribe_on_stop,
-                "tracks": {}, "error": None}
+                "tracks": {}, "error": None, "diarize_on_stop": diarize, "diarization_status": "pending" if diarize else "disabled"}
         if calendar_event:
             item["calendar_event"] = calendar_event
         if source_file:
@@ -182,12 +187,15 @@ def create(title, kind, model, language, transcribe_on_stop, source_file=None, c
     return item
 
 
-def start(title="Встреча", model="small", language=None, transcribe_on_stop=True, calendar_event=None):
+def start(title="Встреча", model="small", language=None, transcribe_on_stop=True, calendar_event=None, diarize=False):
     if sys.platform != "darwin" or not capture_binary().is_file():
         raise ValueError("Recording needs macOS 15+ and the native helper. Run scripts/setup.py.")
     if transcribe_on_stop:
         require_model(model)
-    item = create(title, "capture", model, language, transcribe_on_stop, calendar_event=calendar_event)
+    if diarize:
+        from diarization import require_available
+        require_available()
+    item = create(title, "capture", model, language, transcribe_on_stop, calendar_event=calendar_event, diarize=diarize)
     # Return actual capture status, never claim recording merely because spawned.
     for _ in range(30):
         item = get(item["id"])
@@ -232,12 +240,15 @@ def set_transcription(meeting_id, enabled):
         return item
 
 
-def import_audio(source_file, title="Импорт записи", model="small", language=None):
+def import_audio(source_file, title="Импорт записи", model="small", language=None, diarize=False):
     require_model(model)
-    return create(title, "import", model, language, True, source_file)
+    if diarize:
+        from diarization import require_available
+        require_available()
+    return create(title, "import", model, language, True, source_file, diarize=diarize)
 
 
-def retry_transcription(meeting_id, model=None, language=None):
+def retry_transcription(meeting_id, model=None, language=None, diarize=None):
     with database() as db:
         reconcile(db)
         row = db.execute("SELECT * FROM meetings WHERE id=?", (meeting_id,)).fetchone()
@@ -253,7 +264,12 @@ def retry_transcription(meeting_id, model=None, language=None):
             raise ValueError("No audio tracks to transcribe")
         if language is not None and (not language.isalpha() or not 2 <= len(language) <= 3):
             raise ValueError("Invalid language code")
-        item.update(state="queued", model=model or item["model"], language=language or item["language"], tracks=tracks, error=None)
+        enabled = item.get("diarize_on_stop", False) if diarize is None else diarize
+        if enabled:
+            from diarization import require_available
+            require_available()
+        item.update(state="queued", model=model or item["model"], language=language or item["language"], tracks=tracks, error=None,
+                    diarize_on_stop=enabled, diarization_status="pending" if enabled else "disabled", diarization_error=None, speaker_count=0)
         save(db, item)
     try:
         spawn(meeting_id, "transcribe")
@@ -270,7 +286,16 @@ def timestamp(seconds, srt=False):
     return f"{hours:02}:{minutes:02}:{seconds:02}{',' if srt else '.'}{millis:03}"
 
 
-def write_transcript(item, segments, languages):
+def segment_line(segment, transcript):
+    names = {speaker['id']: speaker.get('name') or speaker['id'] for speaker in transcript.get('speakers', [])}
+    label = names.get(segment.get('speaker_id'), 'speaker uncertain') if 'speaker_id' in segment else ''
+    extra = '; overlapping speech' if segment.get('overlapping_speech') else ''
+    if segment.get('overlapping_channels'):
+        extra += '; speech in both channels, possible echo'
+    return f"[{timestamp(segment['start'])}] [{segment['source']}{'; ' + label if label else ''}{extra}] ({segment['id']}) {segment['text']}"
+
+
+def write_transcript(item, segments, languages, speakers=None, diarization=None):
     segments.sort(key=lambda x: (x["start"], x["end"], x["source"]))
     for index, segment in enumerate(segments, 1):
         segment["id"] = f"s{index:05}"
@@ -278,12 +303,15 @@ def write_transcript(item, segments, languages):
     transcript = {"meeting_id": item["id"], "title": item["title"], "model": item["model"], "languages": languages,
                   "speaker_note": "Sources label microphone and system audio, not individual speakers. Whisper does not perform speaker diarization.",
                   "segments": segments}
+    if diarization:
+        transcript.update(speakers=speakers or [], diarization=diarization, speaker_note=diarization['note'])
     transcript["sha256"] = hashlib.sha256(json.dumps(transcript, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     atomic_json(directory / "transcript.json", transcript)
-    lines = [f"[{timestamp(s['start'])}] [{s['source']}] ({s['id']}) {s['text']}" for s in segments]
+    lines = [segment_line(s, transcript) for s in segments]
     (directory / "transcript.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
     (directory / "transcript.md").write_text(f"# {item['title']}\n\n{transcript['speaker_note']}\n\n" + "\n\n".join(lines) + "\n", encoding="utf-8")
-    captions = [f"{i}\n{timestamp(s['start'], True)} --> {timestamp(s['end'], True)}\n[{s['source']}] {s['text']}\n" for i, s in enumerate(segments, 1)]
+    names = {speaker['id']: speaker.get('name') or speaker['id'] for speaker in transcript.get('speakers', [])}
+    captions = [f"{i}\n{timestamp(s['start'], True)} --> {timestamp(s['end'], True)}\n[{names.get(s.get('speaker_id'), 'speaker uncertain' if 'speaker_id' in s else s['source'])}{'; overlapping speech' if s.get('overlapping_speech') else ''}] {s['text']}\n" for i, s in enumerate(segments, 1)]
     (directory / "transcript.srt").write_text("\n".join(captions), encoding="utf-8")
     return transcript
 
@@ -296,16 +324,26 @@ def transcribe(item):
     segments, languages = [], {}
     for name, filename in item["tracks"].items():
         output, info = model.transcribe(filename, language=item["language"], beam_size=5,
-                                       vad_filter=True, condition_on_previous_text=False)
+                                       vad_filter=True, condition_on_previous_text=False, word_timestamps=item.get("diarize_on_stop", False))
         languages[name] = {"language": info.language, "probability": info.language_probability}
         for segment in output:
             text = segment.text.strip()
             if text:
                 segments.append({"source": name, "start": segment.start, "end": segment.end,
                                  "text": text, "avg_logprob": segment.avg_logprob,
-                                 "no_speech_probability": segment.no_speech_prob})
+                                 "no_speech_probability": segment.no_speech_prob,
+                                 **({"words": [{"start": w.start, "end": w.end, "word": w.word, "probability": w.probability} for w in segment.words]} if segment.words else {})})
     result = write_transcript(item, segments, languages)
-    update(item["id"], state="ready", segment_count=len(result["segments"]), completed_at=now(),
+    if item.get('diarize_on_stop'):
+        import diarization
+        del model
+        update(item['id'], state='diarizing', diarization_status='running')
+        try:
+            result = diarization.process(item, result)
+        except Exception as exc:
+            # Preserve the successful ASR transcript if optional diarization fails.
+            update(item['id'], diarization_status='failed', diarization_error=str(exc))
+    update(item["id"], state="ready", transcript_sha256=result['sha256'], segment_count=len(result["segments"]), completed_at=now(),
            transcript_path=str(Path(item["directory"]) / "transcript.json"), error=None)
 
 
@@ -378,6 +416,10 @@ def handoff(meeting_id, area, brief, include_transcript=False, destination_direc
             payload["analysis"] = saved
         else:
             payload["analysis_note"] = "Previous analysis is stale after retranscription and was omitted."
+    if transcript.get("diarization"):
+        payload["speaker_note"] = transcript["speaker_note"]
+        payload["speakers"] = transcript.get("speakers", [])
+        payload["diarization"] = transcript["diarization"]
     if include_transcript:
         payload["transcript"] = transcript
     target = Path(destination_directory).expanduser().resolve(strict=True) if destination_directory else directory / "handoffs"
@@ -394,6 +436,9 @@ def handoff(meeting_id, area, brief, include_transcript=False, destination_direc
         lines += ["", "## Calendar event", "", f"{event['title']} — {event['start']} → {event['end']}",
                   f"Calendar: {event['calendar_id']}; event: {event['event_id']}"]
         lines += [event[key] for key in ("event_url", "meet_url") if event.get(key)]
+    if payload.get("speaker_note"):
+        lines += ["", "## Speaker attribution", "", payload["speaker_note"]]
+        lines += [f"- {speaker['id']}: {speaker.get('name') or 'unnamed'} (user-supplied alias; {speaker['source']})" for speaker in payload["speakers"]]
     if payload.get("analysis"):
         saved = payload["analysis"]
         lines += ["", "## Summary", "", saved["summary"]]
@@ -406,6 +451,6 @@ def handoff(meeting_id, area, brief, include_transcript=False, destination_direc
                 lines.append("No recorded items.")
     if include_transcript:
         lines += ["", "## Transcript", "", transcript["speaker_note"], ""]
-        lines += [f"[{timestamp(s['start'])}] [{s['source']}] ({s['id']}) {s['text']}" for s in transcript["segments"]]
+        lines += [segment_line(s, transcript) for s in transcript["segments"]]
     (target / (name + ".md")).write_text("\n".join(lines) + "\n", encoding="utf-8")
     return {"json": str(target / (name + ".json")), "markdown": str(target / (name + ".md")), "delivery": payload["delivery"]}

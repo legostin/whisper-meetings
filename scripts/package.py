@@ -7,7 +7,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / 'plugins/whisper-meetings'
 version = json.loads((PLUGIN / 'plugin.json').read_text())['version']
-paths = ['plugin.json','mcp.json','pyproject.toml','uv.lock','server.py','meetings.py','calendar_links.py','worker.py','analysis.schema.json','README.md','LICENSE','PRIVACY.md','TERMS.md','THIRD_PARTY_NOTICES.md','web/dist/widget.html']
+paths = ['plugin.json','mcp.json','pyproject.toml','uv.lock','server.py','meetings.py','calendar_links.py','diarization.py','worker.py','analysis.schema.json','README.md','LICENSE','PRIVACY.md','TERMS.md','THIRD_PARTY_NOTICES.md','web/dist/widget.html']
 for directory in ('skills','scripts','native','assets','web'):
     paths += [p.relative_to(PLUGIN).as_posix() for p in (PLUGIN / directory).rglob('*') if p.is_file() and '__pycache__' not in p.parts and not p.is_symlink()]
 assert all(not Path(p).is_absolute() and '..' not in Path(p).parts for p in paths)

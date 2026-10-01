@@ -5,6 +5,7 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, ConfigDict, Field
 import meetings
 import calendar_links
+import diarization
 from calendar_links import CalendarEvent
 
 os.umask(0o077)
@@ -24,7 +25,7 @@ def meetings_panel() -> str:
           annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
 def meetings_open_panel() -> dict:
     """Open the interactive Whisper Meetings panel. Opening it does not start recording or send meeting text to the model."""
-    return {"version": "0.2.0", "panel": PANEL_URI}
+    return {"version": "0.3.0", "panel": PANEL_URI}
 
 
 @mcp.tool(meta={"ui": {"visibility": ["app"]}},
@@ -75,10 +76,10 @@ def meetings_doctor() -> dict:
 
 
 @mcp.tool(annotations={'readOnlyHint': False, 'destructiveHint': False, 'openWorldHint': False})
-def meetings_start(title: str = "Встреча", model: str = "small", language: str | None = None, transcribe_on_stop: bool = True, calendar_event_id: str | None = None, calendar_id: str = "primary") -> dict:
+def meetings_start(title: str = "Встреча", model: str = "small", language: str | None = None, transcribe_on_stop: bool = True, calendar_event_id: str | None = None, calendar_id: str = "primary", diarize: bool = False) -> dict:
     """Start recording microphone AND Mac system audio, only when the user asks. Captures all Mac playback (including Zoom/Meet); headphones recommended to avoid echo. Returns starting while macOS permission is pending, or recording once capture begins. A detached local worker survives MCP reconnects. Default: transcribe locally after stop; max recording 12 hours."""
     event = calendar_links.resolve(calendar_id, calendar_event_id) if calendar_event_id else None
-    return meetings.start(event["title"] if event and title == "Встреча" else title, model, language, transcribe_on_stop, event)
+    return meetings.start(event["title"] if event and title == "Встреча" else title, model, language, transcribe_on_stop, event, diarize)
 
 
 @mcp.tool(annotations={'readOnlyHint': False, 'destructiveHint': True, 'openWorldHint': False})
@@ -108,20 +109,20 @@ def meetings_status(meeting_id: str) -> dict:
 
 
 @mcp.tool(annotations={'readOnlyHint': False, 'destructiveHint': False, 'openWorldHint': True})
-def meetings_import(source_file: str, title: str = "Импорт записи", model: str = "small", language: str | None = None) -> dict:
+def meetings_import(source_file: str, title: str = "Импорт записи", model: str = "small", language: str | None = None, diarize: bool = False) -> dict:
     """Copy an existing local audio/video file into the private archive and start offline Whisper transcription. Returns queued, not a finished transcript."""
-    return meetings.import_audio(source_file, title, model, language)
+    return meetings.import_audio(source_file, title, model, language, diarize)
 
 
 @mcp.tool(annotations={'readOnlyHint': False, 'destructiveHint': True, 'openWorldHint': False})
-def meetings_transcribe(meeting_id: str, model: str | None = None, language: str | None = None) -> dict:
+def meetings_transcribe(meeting_id: str, model: str | None = None, language: str | None = None, diarize: bool | None = None) -> dict:
     """Transcribe saved audio or retry a failed/interrupted job using an already installed local Whisper model. Active recording/jobs must finish first."""
-    return meetings.retry_transcription(meeting_id, model, language)
+    return meetings.retry_transcription(meeting_id, model, language, diarize)
 
 
 @mcp.tool(annotations={'readOnlyHint': True, 'destructiveHint': False, 'openWorldHint': False})
 def meetings_read_transcript(meeting_id: str, offset: int = 0, limit: int = 100) -> dict:
-    """Read timestamped transcript segments, source channels and stable evidence IDs. Paginated: follow next_offset until null before claiming a complete analysis. Microphone/system labels are not speaker identities."""
+    """Read timestamped transcript segments, source channels and stable evidence IDs. Paginated: follow next_offset until null before claiming a complete analysis. Microphone/system labels are channels. Optional speaker_ids are estimates, names are user-supplied aliases. Do not assign ambiguous/overlapping text to one person."""
     return meetings.read_transcript(meeting_id, offset, limit)
 
 
@@ -147,6 +148,18 @@ def meetings_stage_calendar_events(events: list[CalendarEvent]) -> dict:
 def meetings_link_calendar_event(meeting_id: str, event: CalendarEvent) -> dict:
     """Attach or replace supplied event metadata on an existing local recording/transcript. Saves the event ID, calendar ID, title, times and optional Calendar/Meet URLs in the meeting archive and future handoffs. Does not change the calendar, join Meet or start capture."""
     return calendar_links.link(meeting_id, event.model_dump())
+
+
+@mcp.tool(annotations={'readOnlyHint': False, 'destructiveHint': True, 'openWorldHint': False})
+def meetings_diarize(meeting_id: str) -> dict:
+    """Estimate speakers and overlapping speech in a ready transcript using retained audio and an installed local Core ML model. Returns diarizing; poll until ready. Replaces previous speaker labels and clears manual names, invalidating saved analysis. Text is preserved. No model download, voiceprint persistence or cross-meeting identity matching."""
+    return diarization.queue(meeting_id)
+
+
+@mcp.tool(annotations={'readOnlyHint': False, 'destructiveHint': True, 'openWorldHint': False})
+def meetings_rename_speaker(meeting_id: str, speaker_id: str, name: str) -> dict:
+    """Set a user-supplied alias for an existing estimated speaker in a ready transcript. IDs are scoped to this meeting/channel. This does not verify identity. Changes transcript hash, making previous analysis stale. Use only names supplied or confirmed by the user."""
+    return diarization.rename(meeting_id, speaker_id, name)
 
 
 if __name__ == "__main__":

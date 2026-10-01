@@ -17,11 +17,20 @@ Use the `whisper_meetings` MCP tools for capture and transcription. If unavailab
 - For "включи расшифровку", enable it on the active meeting or call `meetings_transcribe` for saved audio. Use `meetings_import` for a user-selected local audio/video file. Only installed models are usable; no silent model downloads.
 - The worker survives MCP connection shutdown. Disabling/uninstalling the plugin does not stop an active recording. Tell the user to stop first. Recordings stop automatically after twelve hours.
 
+## Speakers and Russian
+
+- Russian is supported by multilingual Whisper. Default language detection is automatic. Use `language="ru"` when the user explicitly wants Russian speech recognition; the RU/EN interface language is independent.
+- Diarization is optional and disabled by default. On an explicit request, use `diarize=true` on start/import/transcribe, or `meetings_diarize` on a ready meeting with retained audio. Read doctor setup first. No model is silently downloaded. Setup uses public Core ML models with no account/token requirement; do not ask the user for a Hugging Face token.
+- `diarizing` is unfinished. Poll status. If optional processing fails, the ASR transcript remains ready and `diarization_error` explains the limitation. Do not claim completed diarization in that case.
+- Read transcript speaker metadata and per-segment/word `speaker_id`, `speaker_ids`, `speaker_assignment` and `overlapping_speech`. IDs are not names or verified identities. Different channel IDs may represent the same person through echo. There is no voiceprint persistence or cross-meeting identity recognition.
+- Assign names only from the user with `meetings_rename_speaker`. Do not guess them from the Calendar attendee list or voice characteristics. Renaming and repeated diarization invalidate previous analysis; read the new transcript hash and redo analysis. Repeated diarization clears previous manual aliases because cluster IDs can change.
+- Simultaneous voices are not separated into independent audio/text streams. Preserve ambiguity in conclusions and handoffs.
+
 ## Analyze
 
 1. Choose the requested meeting using `meetings_list` and wait for `ready`.
 2. Read all transcript pages with `meetings_read_transcript`, following `next_offset`. If full coverage is not possible, label analysis as partial and do not save it as a complete meeting analysis.
-3. Extract summary, decisions, action items, risks and open questions. Cite stable segment IDs. Use null for owners and deadlines that were not actually stated. Do not assign identities to the microphone/system labels: those are channels, not speaker diarization. Call out uncertain recognition and overlapping speech when it matters.
+3. Extract summary, decisions, action items, risks and open questions. Cite stable segment IDs. Use null for owners and deadlines that were not actually stated. Microphone/system labels are channels. Optional speaker IDs are estimates scoped to this meeting/channel; names are user-supplied aliases, not verified identities. Never assign ambiguous/overlapping text to a single speaker, or infer task ownership from a voice label alone. Call out uncertain recognition when it matters.
 4. Use `meetings_save_analysis` to save the structured result as Markdown/JSON. Pass the `sha256` from the transcript as `transcript_sha256` so a reprocessed transcript cannot silently invalidate the analysis. Every entry requires `text` and a nonempty `evidence_segment_ids` list. Action items also require nullable `owner` and `due_date`. Empty categories use `[]`.
 5. Provide clickable artifact links and a concise result.
 

@@ -58,10 +58,21 @@ def run(meeting_id, mode):
             # when several files are imported from different Codex chats.
             with (data_home() / "transcription.lock").open("a") as model_lock:
                 fcntl.flock(model_lock, fcntl.LOCK_EX)
-                update(meeting_id, state="transcribing")
-                transcribe(item)
+                if mode == 'diarize':
+                    import json
+                    import diarization
+                    update(meeting_id, state='diarizing')
+                    transcript = json.loads((directory / 'transcript.json').read_text())
+                    diarization.process(item, transcript)
+                    update(meeting_id, state='ready')
+                else:
+                    update(meeting_id, state="transcribing")
+                    transcribe(item)
         except Exception as error:
-            update(meeting_id, state="failed", error=str(error))
+            if mode == 'diarize':
+                update(meeting_id, state='ready', diarization_status='failed', diarization_error=str(error))
+            else:
+                update(meeting_id, state="failed", error=str(error))
 
 
 if __name__ == "__main__":

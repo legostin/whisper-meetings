@@ -20,7 +20,7 @@ def payload(result):
     return json.loads(next(c.text for c in result.content if c.type == "text"))
 
 
-async def main(plugin, fixture):
+async def main(plugin, fixture, language='en', diarize=False):
     real_home = Path(os.environ.get("WHISPER_MEETINGS_HOME", "~/.local/share/whisper-meetings")).expanduser()
     with tempfile.TemporaryDirectory(prefix="whisper-meetings-smoke-") as temporary:
         home = Path(temporary)
@@ -36,7 +36,7 @@ async def main(plugin, fixture):
                 await session.initialize()
                 tools = await session.list_tools()
                 print("MCP tools:", len(tools.tools), flush=True)
-                assert len(tools.tools) == 16
+                assert len(tools.tools) == 18
                 panel = next(t for t in tools.tools if t.name == "meetings_open_panel")
                 assert panel.meta["ui"]["resourceUri"] == "ui://whisper-meetings/panel.html"
                 resource = await session.read_resource(panel.meta["ui"]["resourceUri"])
@@ -47,14 +47,14 @@ async def main(plugin, fixture):
                     assert all(isinstance(getattr(tool.annotations, key), bool) for key in ("readOnlyHint", "destructiveHint", "openWorldHint"))
                 check = payload(await session.call_tool("meetings_doctor", {}))
                 assert "small" in check["models"]
-                imported = payload(await session.call_tool("meetings_import", {"source_file": str(fixture), "title": "Self-test: synthetic speech", "language": "en"}))
+                imported = payload(await session.call_tool("meetings_import", {"source_file": str(fixture), "title": "Self-test: synthetic speech", "language": None if language == "auto" else language, "diarize": diarize}))
                 identity = imported["id"]
                 print("Import:", imported["state"], flush=True)
         # Reconnect while detached transcription is running.
         async with stdio_client(parameters) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 await session.initialize()
-                deadline = time.monotonic() + 90
+                deadline = time.monotonic() + 180
                 while time.monotonic() < deadline:
                     state = payload(await session.call_tool("meetings_status", {"meeting_id": identity}))
                     if state["state"] in {"ready", "failed", "interrupted"}:
@@ -64,11 +64,28 @@ async def main(plugin, fixture):
                 transcript = payload(await session.call_tool("meetings_read_transcript", {"meeting_id": identity}))
                 text = " ".join(s["text"] for s in transcript["segments"])
                 print("Transcript:", text, flush=True)
-                assert "friday" in text.lower() and "release notes" in text.lower(), text
+                if language == 'en':
+                    assert "friday" in text.lower() and "release notes" in text.lower(), text
+                else:
+                    assert 'пятниц' in text.lower() and 'инструкц' in text.lower(), text
+                    assert transcript['languages']['imported']['language'] == 'ru'
+                if diarize:
+                    assert state['diarization_status'] == 'complete', state
+                    assert transcript['speakers']
+                    assert transcript['diarization']['engine'] == 'Core ML / FluidAudio offline VBx'
+                    assert 'speaker_assignment' in transcript['segments'][0]
+                    renamed = payload(await session.call_tool('meetings_rename_speaker', {
+                        'meeting_id': identity, 'speaker_id': transcript['speakers'][0]['id'], 'name': 'Тестовый голос'}))
+                    assert renamed['identity'] == 'user_supplied_alias'
+                    transcript = payload(await session.call_tool('meetings_read_transcript', {'meeting_id': identity}))
+                    assert transcript['speakers'][0]['name'] == 'Тестовый голос'
+                    print('PASS: native offline speaker inference and manual alias', flush=True)
                 evidence = [s["id"] for s in transcript["segments"]]
-                analysis = {"summary": "Synthetic smoke test: project release planning.", "decisions": [
-                    {"text": "Launch the project on Friday.", "evidence_segment_ids": evidence}],
-                    "action_items": [{"text": "Prepare the release notes.", "owner": "Alex", "due_date": None, "evidence_segment_ids": evidence}],
+                russian = language != 'en'
+                owner = 'Алексей' if russian else 'Alex'
+                analysis = {"summary": "Планирование выпуска новой версии." if russian else "Synthetic smoke test: project release planning.", "decisions": [
+                    {"text": "Выпустить новую версию в пятницу." if russian else "Launch the project on Friday.", "evidence_segment_ids": evidence}],
+                    "action_items": [{"text": "Подготовить инструкцию по установке." if russian else "Prepare the release notes.", "owner": owner, "due_date": None, "evidence_segment_ids": evidence}],
                     "risks": [], "open_questions": []}
                 saved = payload(await session.call_tool("meetings_save_analysis", {
                     "meeting_id": identity, "transcript_sha256": transcript["sha256"], "analysis": analysis}))
@@ -83,7 +100,7 @@ async def main(plugin, fixture):
                 bundle = payload(await session.call_tool("meetings_prepare_handoff", {
                     "meeting_id": identity, "area": "engineering", "brief": "Prepare the release plan based on the meeting.", "include_transcript": True}))
                 exported = json.loads(Path(bundle["json"]).read_text())
-                assert exported["analysis"]["action_items"][0]["owner"] == "Alex"
+                assert exported["analysis"]["action_items"][0]["owner"] == owner
                 assert exported["transcript"]["segments"]
                 assert exported["calendar_event"]["event_id"] == "synthetic-event"
                 assert "## Calendar event" in Path(bundle["markdown"]).read_text()
@@ -94,5 +111,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("fixture", type=Path)
     parser.add_argument("--plugin", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument('--language', choices=['en','ru','auto'], default='en')
+    parser.add_argument('--diarize', action='store_true')
     args = parser.parse_args()
-    asyncio.run(main(args.plugin.resolve(), args.fixture.resolve()))
+    asyncio.run(main(args.plugin.resolve(), args.fixture.resolve(), args.language, args.diarize))
