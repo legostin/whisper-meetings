@@ -53,10 +53,13 @@ The selected public [Community-1-derived Core ML models](https://huggingface.co/
 
 ## Calendar and Google Meet
 
-Click **Choose from Google Calendar** to ask Codex for events through an available, authorized calendar integration. Select an event in the conversation, then choose it in the panel. It supplies the new meeting's title and attaches calendar/event IDs, title, times and Calendar/Meet links. You can also link an event to an existing recording.
+**Public preview:** pasting a Meet link works without account setup. Direct Google login appears only in locally configured installations; the public package contains no OAuth client secret. See [Google preview setup](GOOGLE_CALENDAR.md).
 
-The local server does not call Google APIs, store Google OAuth credentials or modify the calendar. A connector is separate and optional; its availability depends on your account and host. Without a connector, selected event metadata can be supplied directly to `meetings_link_calendar_event`. Attendees and event descriptions are not copied.
+In a configured installation, click **Connect Google**. Sign in in your system browser and allow read-only calendar access. Return to the panel: choose a meeting directly from the dropdown. Its title and Calendar/Meet links are attached when you start recording. Use **Refresh meetings** to reload the next seven days from your primary calendar, or **Disconnect** to remove the connection. Google tokens remain in macOS Keychain.
 
+You can instead expand **Or paste a Google Meet link** and paste the URL. Start a recording with that link, or use **Link to selected recording** to attach it to a saved meeting. This does not require a calendar account or a conversation with the agent.
+
+The server requests only identifiers, title, times and meeting links. Attendees and event descriptions are excluded. Older agent-supplied event metadata tools remain available for compatibility.
 Linking an event does not join Meet or start recording, and is not Google Meet's native recording feature.
 
 ## Context for another chat

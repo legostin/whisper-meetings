@@ -2,7 +2,7 @@
 
 Record meeting audio on your Mac, transcribe it locally with Whisper, and ask Codex for structured reports and context for other chats.
 
-**Version 0.5.0 · Preview release · macOS 15+**
+**Version 0.6.0 · Preview release · macOS 15+**
 
 [Full installation guide](https://github.com/legostin/whisper-meetings#install) · [Usage guide](https://github.com/legostin/whisper-meetings/blob/main/docs/USAGE.md) · [Support](https://github.com/legostin/whisper-meetings/issues)
 
@@ -45,7 +45,7 @@ Labels estimate voices within one meeting and channel; names are user-supplied. 
 
 ## Calendar and other chats
 
-**Choose from Google Calendar** asks the host to obtain selected events through an available, separately connected calendar integration. The plugin stores minimal event metadata and Calendar/Meet links. It does not store Google credentials, modify events, join Meet or start recording when an event is attached.
+Paste a Google Meet link directly in the panel, or choose **Connect Google** in a configured preview installation and select an event without an agent. Google Calendar access is read-only; tokens stay in macOS Keychain. Public-source installs have no bundled OAuth client secret and use the Meet-link fallback until direct Google sign-in is configured. See [Google setup](../../docs/GOOGLE_CALENDAR.md). Linking does not modify events, join Meet or start recording.
 
 **Another agent** prepares local Markdown/JSON context packages. Sending a package is a separate, explicit request to Codex with an exact recipient chat name. Delivery and panel rendering depend on the host's capabilities.
 

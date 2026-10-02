@@ -1,8 +1,15 @@
-# Verification — Whisper Meetings 0.5.0
+# Verification — Whisper Meetings 0.6.0
 
 Checked October 2, 2026 on Apple Silicon macOS. Scope and evidence are separated below; no directory approval or live-call recording success is claimed.
 
 ## Passed
+
+- **0.6 direct Google preview**: dedicated publisher project and Desktop OAuth client created through Google Cloud, Calendar API enabled and calendar.events.readonly selected. A real browser login completed after correcting the saved test-user entry. Access and refresh tokens were read back from macOS Keychain without printing their values; a real primary-calendar events API read succeeded (zero events in the tested seven-day window). No audio was uploaded. The project remains in Google Testing; this is not public OAuth verification.
+- **0.6 account storage**: native Swift Security helper compiled and ad hoc signed; synthetic Keychain write/read/delete passed using a unique temporary account. Credentials stay outside the repository and package.
+- **84 Python tests**: previous 65 plus Google normalization/minimal read fields, manual Meet URL validation and persistence, token refresh isolation, disconnect cache cleanup, a real HTTP loopback callback with mocked provider, wrong Host/state rejection, PKCE validation, disconnect during token exchange, expired grants and malformed provider events. Tests never connect to a real account or open input devices.
+- **0.6 UI preview**: SDK bridge connect/select/start with a synthetic event, disconnect/cache clearing, manual Meet link/start and retained Open Meet action passed without agent messages or audio capture. Actual Google API success was also checked separately; optional real-Google preview displayed the connected state with its distinct banner. Nonempty real-event selection remains unverified.
+- **0.6 source MCP smoke**: 26 tools and bundled UI; actual offline Russian Whisper import, optional native speaker processing, supplied analysis, event association and context export passed. No microphone was opened.
+
 
 - **0.5 pause/native chunk capture**: production audio writers exercised with generated PCM through `--test-streaming-sinks`. Five paused seconds excluded from both 25-second tracks; paused 0.9-amplitude PCM absent. Shared chunk boundaries 0–12, 12–24, 24–25; every published chunk decoded as a valid finalized WAV. Async microphone writer separately retains two of three buffers across pause/resume, with no system track. Native capture release compiles; no input device opened.
 - **0.5 actual live Whisper worker**: `scripts/smoke_live.py` with offline Russian synthetic speech produced correct provisional text while a synthetic meeting remained recording. Draft survived another read/stop; no final hash or final transcript was fabricated, and no microphone was opened.
@@ -38,7 +45,7 @@ The smoke analysis is supplied test data; the smoke does not claim that Whisper 
 
 - A real microphone + Zoom/Meet recording, actual two-device timing, muted input, overlapping speech, audio-device switches and sleep/wake.
 - Panel mounting, sidebar/thread entrypoints, host messages and calendar selection inside each production Codex/ChatGPT version. The source/SDK contracts and preview pass; actual UI mounting is not yet verified.
-- Live Google Calendar retrieval and selection through the user's connected host integration. The local metadata/link/handoff operations are tested with synthetic events; no real calendar has been copied into the release.
+- Production shared Google login and nonempty live-event selection. Provider verification and secure shared client distribution remain outstanding; public installs use Meet-link fallback. Direct configured Google API retrieval passed with an empty primary-calendar window. Event selection and links passed with synthetic metadata; nonempty real-event selection and production-panel mounting remain unverified. No private calendar has been copied into the release.
 - Actual cross-chat delivery through host tools. Local package creation is verified; the preview only verifies the message request contract.
 
 ## Directory submission

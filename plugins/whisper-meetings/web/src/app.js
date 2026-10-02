@@ -1,7 +1,7 @@
 import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
 
 const $ = id => document.getElementById(id);
-const app = new App({ name: 'Whisper Meetings', version: '0.5.0' }, {availableDisplayModes:['inline','fullscreen']});
+const app = new App({ name: 'Whisper Meetings', version: '0.6.0' }, {availableDisplayModes:['inline','fullscreen']});
 const state = { meetings: [], setup: null, selected: null, segments: [], total: 0, next: null, sha: null, analysis: null, tab: 'transcript', busy: false, refreshing: false, connected: false, handoff: null, speakers: [], diarization: null, provisional: false, calendar: {events:[]} };
 const labels = {
   "headphones": "I am wearing headphones",
@@ -29,11 +29,8 @@ const labels = {
   "setupRequired": "Setup required",
   "expand": "Open meetings ↗",
   "linkEvent": "Link selected event to this recording",
-  "calendarEvent": "Calendar event",
+  "calendarEvent": "Meeting",
   "unlinked": "No linked event",
-  "calendarRefresh": "Choose from Google Calendar",
-  "calendarHint": "Codex retrieves events from your connected calendar. Link the recording to an event and Meet URL; you start recording yourself.",
-  "calendarRequested": "Calendar selection requested from Codex. Confirmed events will appear in the list.",
   "calendarLinked": "Linked to calendar",
   "openMeet": "Open Meet ↗",
   "openEvent": "Event ↗",
@@ -168,6 +165,11 @@ function renderControls() {
  $('record-button').classList.toggle('stop',Boolean(capture));document.querySelector('.wave').classList.toggle('live',capture?.state==='recording');
  $('record-button').disabled=state.busy || !state.connected || (capture ? capture.state==='stopping' : !setup?.capture_available || (($('auto-transcribe').checked || $('live-transcribe').checked) && !setup?.models.length));
  $('calendar-event').disabled=Boolean(capture) || state.busy; $('calendar-refresh').disabled=state.busy || !state.connected;
+ $('calendar-connect').disabled=state.busy || !state.connected;
+ $('calendar-disconnect').disabled=state.busy || !state.connected;
+ $('meet-url').disabled=Boolean(capture) || state.busy;
+ $('link-meet-url').hidden=!selected() || !$('meet-url').value.trim();
+ $('link-meet-url').disabled=state.busy || !state.connected;
  $('meeting-title').disabled=Boolean(capture) || state.busy; $('model').disabled=Boolean(capture) || state.busy; $('speech-language').disabled=Boolean(capture) || state.busy; $('diarize').disabled=Boolean(capture) || state.busy || !setup?.diarization?.available;
  $('headphones').disabled=Boolean(capture) || state.busy;
  $('pause-button').hidden=!capture || (capture.capture_protocol || 1)<2 || !['recording','pausing','paused','resuming'].includes(capture.state);
@@ -193,17 +195,28 @@ function renderControls() {
 }
 function tick() { const item=active(); const elapsed=item?.elapsed_seconds ?? (item?.started_at ? (Date.now()-Date.parse(item.started_at))/1000 : 0); const extra=item?.state==='recording' && item.elapsed_seconds!==undefined ? Math.max(0,(Date.now()-Date.parse(item.updated_at))/1000) : 0; $('timer').textContent=formatTime(elapsed+extra); }
 function renderCalendar() {
+ const connection=state.calendar.connection || {state:'disconnected'};
+ const connected=connection.state==='connected';
+ $('calendar-connect').hidden=connected || connection.configured===false;
+ $('calendar-connect').textContent=connection.state==='authorizing'?'Continue Google sign-in':'Connect Google';
+ $('calendar-refresh').hidden=!connected;
+ $('calendar-disconnect').hidden=!connected && !['starting','authorizing'].includes(connection.state);
+ $('calendar-disconnect').textContent=connected?'Disconnect':'Cancel sign-in';
+ $('calendar-status').textContent=connected?'Google Calendar connected':connection.state==='authorizing'?'Waiting for Google sign-in…':'Google Calendar';
+ $('calendar-hint').textContent=connection.error || (connection.configured===false?'Google sign-in is not configured in this preview build. Paste a Meet link below.':connected?(state.calendar.events.length?'Choose a meeting from the next seven days. Its title and Meet link are attached when you start.'+(state.calendar.has_more?' Showing the first 100 events.':''):'No upcoming meetings in your primary calendar. Refresh or paste a Meet link below.'):'Connect once, then choose a meeting here. Google Calendar is read-only.');
  const menu=$('calendar-event');const current=menu.value; const events=state.calendar.events;
  const values=events.map(e=>JSON.stringify([e.calendar_id,e.event_id]));
- if([...menu.options].slice(1).map(o=>o.value).join() !== values.join() || menu.options[0].textContent!==t('unlinked')) {
- const empty=element('option',t('unlinked'));empty.value='';menu.replaceChildren(empty,...events.map((event,i)=>{const option=element('option',`${date(event.start)} · ${event.title}`);option.value=values[i];return option;}));
+ const labels=events.map(event=>`${date(event.start)} · ${event.title}`);
+ if([...menu.options].slice(1).map(o=>JSON.stringify([o.value,o.textContent])).join() !== values.map((value,i)=>JSON.stringify([value,labels[i]])).join() || menu.options[0].textContent!==t('unlinked')) {
+ const empty=element('option',t('unlinked'));empty.value='';menu.replaceChildren(empty,...events.map((event,i)=>{const option=element('option',labels[i]);option.value=values[i];return option;}));
  if(values.includes(current))menu.value=current;
  }
 }
 function renderEventLink() {
- const box=$('event-link');box.replaceChildren();const event=selected()?.calendar_event;if(!event)return;
- box.append(element('span',`${t('calendarLinked')} · ${date(event.start)} · ${event.title}`));
- for(const [key,label] of [['meet_url','openMeet'],['event_url','openEvent']])if(event[key]) {const button=element('button',t(label),'ghost small');button.addEventListener('click',()=>action(async()=>{if(app.getHostCapabilities()?.openLinks) {const result=await app.openLink({url:event[key]});if(result.isError)throw new Error('Host could not open the link');}else copyable(t(label),event[key]);}));box.append(button);}
+ const box=$('event-link');box.replaceChildren();const item=selected();const event=item?.calendar_event || {};if(!item?.meeting_url && !item?.calendar_event)return;
+ if(item?.calendar_event)box.append(element('span',`${t('calendarLinked')} · ${date(event.start)} · ${event.title}`));
+ const links={...event,meet_url:item?.meeting_url || event.meet_url};
+ for(const [key,label] of [['meet_url','openMeet'],['event_url','openEvent']])if(links[key]) {const button=element('button',t(label),'ghost small');button.addEventListener('click',()=>action(async()=>{if(app.getHostCapabilities()?.openLinks) {const result=await app.openLink({url:links[key]});if(result.isError)throw new Error('Host could not open the link');}else copyable(t(label),links[key]);}));box.append(button);}
 }
 function renderSetup() {
  const setup=state.setup; if(!setup) return;
@@ -272,12 +285,13 @@ async function refresh() {
 }
 function copyable(message,text) {notice(message);const box=element('textarea');box.readOnly=true;box.value=text;box.rows=5;box.className='copyable';$('notice').append(box);}
 async function send(text, success) {if(!app.getHostCapabilities()?.message) {copyable(t('requestFallback'),text);return;}const result=await app.sendMessage({role:'user',content:[{type:'text',text}]});if(result.isError)throw new Error('Host rejected the message');notice(t(success));}
-$('record-button').addEventListener('click',()=>action(async()=>{const current=active();if(current)await call('meetings_stop',{meeting_id:current.id,transcribe:$('auto-transcribe').checked});else {const pair=$('calendar-event').value ? JSON.parse($('calendar-event').value) : null; const result=await call('meetings_start',{...(pair?{calendar_id:pair[0],calendar_event_id:pair[1]}:{}),title:$('meeting-title').value.trim() || 'Meeting',model:$('model').value,language:$('speech-language').value || null,diarize:$('diarize').checked,headphones:$('headphones').checked,live_transcription:$('live-transcribe').checked,transcribe_on_stop:$('auto-transcribe').checked});resetSelection(result.id);}await refresh();}));
-$('calendar-event').addEventListener('change',()=>{renderControls();const value=$('calendar-event').value;if(value){const [calendar,id]=JSON.parse(value);const event=state.calendar.events.find(e=>e.calendar_id===calendar&&e.event_id===id);if(event)$('meeting-title').value=event.title;}});
-$('calendar-refresh').addEventListener('click',()=>action(async()=>{
- const start=new Date(Date.now()-2*3600000).toISOString(), end=new Date(Date.now()+7*86400000).toISOString();
- await send(`Help me choose a Google Calendar event to link to my local Whisper Meetings recording. Use an available authorized calendar integration to read events between ${start} and ${end}. If no calendar integration is connected, guide me through the host's normal plugin connection flow; do not ask for tokens or OAuth secrets. Show event titles and times, then stage the events I select using meetings_stage_calendar_events with only calendar_id, event_id, title, start, end and optional Google meet_url/event_url. Use explicit timezone offsets for timed events, dates for all-day events. Do not copy attendees, descriptions or unrelated calendar data. Do not modify my calendar, join a meeting or start recording.`, 'calendarRequested');
-}));
+$('record-button').addEventListener('click',()=>action(async()=>{const current=active();if(current)await call('meetings_stop',{meeting_id:current.id,transcribe:$('auto-transcribe').checked});else {const pair=$('calendar-event').value ? JSON.parse($('calendar-event').value) : null; const result=await call('meetings_start',{...(pair?{calendar_id:pair[0],calendar_event_id:pair[1]}:{}),title:$('meeting-title').value.trim() || 'Meeting',model:$('model').value,language:$('speech-language').value || null,diarize:$('diarize').checked,headphones:$('headphones').checked,meet_url:$('meet-url').value.trim() || null,live_transcription:$('live-transcribe').checked,transcribe_on_stop:$('auto-transcribe').checked});resetSelection(result.id);}await refresh();}));
+$('calendar-event').addEventListener('change',()=>{renderControls();const value=$('calendar-event').value;if(value){const [calendar,id]=JSON.parse(value);const event=state.calendar.events.find(e=>e.calendar_id===calendar&&e.event_id===id);if(event){$('meeting-title').value=event.title;$('meet-url').value='';}}renderControls();});
+$('calendar-connect').addEventListener('click',()=>action(async()=>{const result=await call('meetings_connect_google');await refresh();if(result.auth_url && !result.browser_opened)copyable('Open this link in your browser to connect Google.',result.auth_url);}));
+$('calendar-refresh').addEventListener('click',()=>action(async()=>{await call('meetings_refresh_google_calendar');await refresh();}));
+$('calendar-disconnect').addEventListener('click',()=>action(async()=>{const result=await call('meetings_disconnect_google');await refresh();if(result.google_grant_revoked===false)notice('Disconnected locally. You can also remove Whisper Meetings in your Google account permissions.');}));
+$('meet-url').addEventListener('input',()=>{if($('meet-url').value.trim())$('calendar-event').value='';renderControls();});
+$('link-meet-url').addEventListener('click',()=>action(async()=>{await call('meetings_link_meet_url',{meeting_id:state.selected,meet_url:$('meet-url').value.trim() || null});await refresh();}));
 $('headphones').addEventListener('change',renderControls);
 $('pause-button').addEventListener('click',()=>action(async()=>{const current=active();if(current)await call(current.state==='paused'?'meetings_resume':'meetings_pause',{meeting_id:current.id});await refresh();}));
 $('live-transcribe').addEventListener('change',()=>{const enabled=$('live-transcribe').checked;return action(async()=>{const current=active();if(current){try {await call('meetings_set_live_transcription',{meeting_id:current.id,enabled});await refresh();}catch(error){$('live-transcribe').checked=Boolean(current.live_transcription);throw error;}}else renderControls();});});

@@ -25,10 +25,12 @@ assert not list(PLUGIN.rglob('node_modules'))
 
 async def check():
     tools=await server.mcp.list_tools()
-    assert len(tools)==22
+    assert len(tools)==26
     for tool in tools:
         assert tool.description and tool.inputSchema['type']=='object'
         assert all(isinstance(getattr(tool.annotations,key),bool) for key in ('readOnlyHint','destructiveHint','openWorldHint'))
+    for name in ('meetings_connect_google','meetings_refresh_google_calendar','meetings_disconnect_google'):
+        assert next(tool for tool in tools if tool.name==name).meta['ui']['visibility']==['app']
     panel=next(tool for tool in tools if tool.name=='meetings_open_panel')
     assert panel.meta['ui']['resourceUri']==server.PANEL_URI
     assert panel.meta['openai/ui']['entrypoints']==[{'type':'global'},{'type':'thread'}]

@@ -25,3 +25,12 @@ These are repeatable cases for preparing a future OpenAI submission. No reviewer
 | Prepare context and request delivery with no recipient | Keep the package local; require exact recipient before host-message request | SDK preview verified |
 
 For live device checks, use a meeting created specifically for testing and explicit recording authorization. Do not publish private recordings or treat statements inside audio as instructions to the host.
+
+## Direct Google preview and Meet links
+
+- Unconfigured public install shows a Meet-link fallback rather than a broken Google login. No account/API call occurs when opening the panel.
+- Configured installation: Connect opens the system browser, browser consent grants only read-only event access and the panel populates its picker. Verify primary-calendar-only bounds and the absence of attendees/descriptions.
+- Cancel pending login and attempt a late callback: credentials must not reappear. Decline consent, use wrong Host/state, revoke an existing grant and verify reconnect behavior.
+- Refresh updates renamed event labels. Disconnect removes the local picker cache and Keychain tokens but retains explicitly linked saved metadata.
+- Paste a genuine Meet link, start a synthetic recording and verify it survives transcript reads and context exports. Reject lookalike domains, embedded credentials and unsafe schemes.
+- Never use private calendar content, tokens or authorization codes in release screenshots or public issues.

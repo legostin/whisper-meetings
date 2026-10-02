@@ -4,9 +4,9 @@
 
 A macOS plugin for Codex with local Whisper transcription, optional speaker detection, structured meeting reports and context packages for other chats.
 
-[Latest release](https://github.com/legostin/whisper-meetings/releases/tag/v0.5.0) · [Installation help](docs/INSTALLATION.md) · [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/legostin/whisper-meetings/issues)
+[Latest release](https://github.com/legostin/whisper-meetings/releases/tag/v0.6.0) · [Installation help](docs/INSTALLATION.md) · [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/legostin/whisper-meetings/issues)
 
-> **Preview release · v0.5.0.** Available through the Git marketplace. This plugin has not been approved for the public OpenAI Plugins Directory. See [validation results](VALIDATION.md) for tested behavior and remaining checks.
+> **Preview release · v0.6.0.** Available through the Git marketplace. This plugin has not been approved for the public OpenAI Plugins Directory. See [validation results](VALIDATION.md) for tested behavior and remaining checks.
 
 ## What you can do
 
@@ -14,7 +14,7 @@ A macOS plugin for Codex with local Whisper transcription, optional speaker dete
 - **Transcribe locally during the meeting** with Whisper. Provisional text arrives in roughly 12-second chunks plus processing time; final text follows after stopping. Automatic language detection, Russian and English are available in the panel; the interface is English.
 - **Distinguish speakers** with optional local Core ML models and mark overlapping or uncertain speech.
 - **Ask Codex for a report** with a short summary, themed bullet points, decisions, tasks, risks and open questions.
-- **Link a calendar event** through an available calendar integration in Codex.
+- **Attach a Google Meet link** in the panel. Configured preview installations can also connect Google Calendar and select upcoming meetings directly.
 - **Prepare context for another chat** as Markdown and JSON, then explicitly ask Codex to deliver it to a named recipient.
 
 Audio processing stays on your Mac. Text you ask Codex to analyze is processed by your configured Codex model.
@@ -31,10 +31,10 @@ You need:
 Paste this into Terminal:
 
 ```sh
-git clone --branch v0.5.0 https://github.com/legostin/whisper-meetings.git
+git clone --branch v0.6.0 https://github.com/legostin/whisper-meetings.git
 cd whisper-meetings
 python3 plugins/whisper-meetings/scripts/setup.py
-codex plugin marketplace add legostin/whisper-meetings --ref v0.5.0
+codex plugin marketplace add legostin/whisper-meetings --ref v0.6.0
 codex plugin add whisper-meetings@whisper-local
 ```
 
@@ -90,7 +90,7 @@ This uses public models without a login or token. Speaker labels are estimates w
 Recordings, transcripts and exports are stored under `~/.local/share/whisper-meetings/`, separately from the plugin cache. They survive plugin updates and remain until you remove them.
 
 - Audio is not uploaded by the plugin. Analysis sends the transcript text into the current Codex agent's context.
-- Calendar access uses a separately connected host integration. This plugin does not store Google credentials, join Meet or change calendar events.
+- Direct Google sign-in is a configured-preview feature, not yet available out of the box in the public source release. Its publisher client configuration and Google verification remain separate from plugin installation. Optional Google sign-in uses read-only Calendar access. Tokens stay in macOS Keychain; the plugin does not join Meet or change calendar events.
 - Recording and transcription run in the background. Live text is provisional and can lag behind on slower hardware. Final transcription and optional speaker detection run after stopping.
 - The panel and cross-chat delivery depend on host capabilities. Live device scenarios and production-host integration still need verification; synthetic tests do not establish live-call reliability.
 

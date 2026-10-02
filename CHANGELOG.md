@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 — 2026-10-02
+
+- Paste a Google Meet link in the panel and retain it in transcript reads and context exports.
+- Direct Google Calendar preview: system-browser Desktop OAuth with PKCE, random-port loopback callback, read-only event access and macOS Keychain token storage. Connect, refresh, cancel and disconnect through panel controls.
+- Pick primary-calendar events without asking an agent to search. Fetch minimal event fields, excluding attendees and descriptions.
+- Google actions are app-only tools; account connection never starts capture. Disconnect removes credentials and picker cache while retaining saved recording associations.
+- Public ZIP excludes OAuth client secrets; unconfigured installations show the Meet-link fallback. Shared public Google sign-in and provider verification remain outstanding.
+- Setup adds the native Keychain helper. Existing models and meeting archives are retained.
+
 ## 0.5.0 — 2026-10-02
 
 - Pause/resume recording with native acknowledgement; paused audio is excluded from both tracks and the recording timeline. Stop works while paused.

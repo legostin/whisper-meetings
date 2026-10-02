@@ -11,3 +11,8 @@ output/
 
 .build/
 .swiftpm/
+
+# Publisher/local OAuth configuration must never be committed.
+**/google-client.json
+**/google-oauth-client.json
+client_secret_*.json

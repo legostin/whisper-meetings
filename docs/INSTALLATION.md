@@ -24,15 +24,15 @@ Stop any active recording first: installing a plugin can replace its previous ca
 
 ```sh
 git fetch origin --tags
-git checkout v0.5.0
+git checkout v0.6.0
 codex plugin marketplace remove whisper-local
-codex plugin marketplace add legostin/whisper-meetings --ref v0.5.0
+codex plugin marketplace add legostin/whisper-meetings --ref v0.6.0
 codex plugin add whisper-meetings@whisper-local
 ```
 
 Restart Codex or open a new chat to load the installed version. Removing the marketplace registration does not delete your separately stored meeting archive.
 
-Updating from **0.4.x or earlier** requires rebuilding the recorder for pause/resume and live chunks. Installed models are reused:
+Updating from **0.5.x or earlier** requires setup to add the Google Keychain helper. Updates from 0.4.x also rebuild the recorder for pause/resume and live chunks. Installed models are reused:
 ```sh
 python3 plugins/whisper-meetings/scripts/setup.py --skip-model
 ```

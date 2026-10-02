@@ -30,7 +30,7 @@ The build installs locked npm dependencies in a temporary directory outside the 
 python3 scripts/preview.py
 ```
 
-Open `http://127.0.0.1:8768/`. The preview is explicitly marked synthetic: it does not enable the microphone or deliver messages to Codex chats. Check compact/fullscreen modes, theme changes and responsive layout. Preview success does not establish production-host rendering.
+Open `http://127.0.0.1:8768/`. The preview is explicitly marked synthetic: it does not enable the microphone or deliver messages to Codex chats. Check compact/fullscreen modes, theme changes and responsive layout. Preview success does not establish production-host rendering. After explicit Google connection, `--google-calendar` can display real locally cached event choices and enable real calendar refresh/disconnect. Its banner distinguishes real Calendar data from simulated recordings. The default preview uses synthetic calendar data and never connects an account.
 
 ## Install a local checkout
 
@@ -79,6 +79,10 @@ This runs the actual offline Whisper live worker with a finalized test chunk whi
 
 The native recorder's `--test-streaming-sinks DIRECTORY` mode exercises its production writers with generated PCM: 30 seconds including a five-second pause become two 25-second tracks, without paused samples. It also checks the microphone-only writer. Use a fresh temporary directory and inspect finalized chunk manifests/WAVs; this is not live device validation.
 
+## Google connection checks
+
+[Google preview setup](GOOGLE_CALENDAR.md) keeps client configuration outside Git. Automated tests use synthetic provider responses and real loopback callbacks: wrong Host/state rejection, PKCE validation, cancelled token exchange, token refresh and event-field minimization. Native Keychain smoke uses a unique temporary account and deletes its synthetic value. Real calendar access requires explicit browser consent; do not log tokens, authorization codes or private event content.
+
 ## Package
 
 ```sh
@@ -94,6 +98,7 @@ The deterministic source ZIP and SHA-256 file are written to `dist/`. The packag
 | `plugins/whisper-meetings/server.py` | MCP tools and panel resource. |
 | `plugins/whisper-meetings/meetings.py` | Archive, job state, analysis and handoffs. |
 | `plugins/whisper-meetings/worker.py` | Detached capture/transcription jobs. |
+| `plugins/whisper-meetings/google_calendar.py` | Desktop OAuth, Keychain bridge and read-only calendar retrieval. |
 | `plugins/whisper-meetings/calendar_links.py` | Minimal selected-event metadata. |
 | `plugins/whisper-meetings/diarization.py` | Local voice estimation and conservative assignments. |
 | `plugins/whisper-meetings/reporting.py` | Human-readable report formatting. |

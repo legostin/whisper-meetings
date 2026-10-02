@@ -158,7 +158,7 @@ def spawn(meeting_id, mode):
                          stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
 
 
-def create(title, kind, model, language, transcribe_on_stop, source_file=None, calendar_event=None, diarize=False, headphones=False, live_transcription=False):
+def create(title, kind, model, language, transcribe_on_stop, source_file=None, calendar_event=None, diarize=False, headphones=False, live_transcription=False, meeting_url=None):
     if not title.strip() or len(title) > 240:
         raise ValueError("title must contain 1..240 characters")
     model_path(model)
@@ -183,6 +183,8 @@ def create(title, kind, model, language, transcribe_on_stop, source_file=None, c
                 (directory / 'live-enabled').touch()
         if calendar_event:
             item["calendar_event"] = calendar_event
+        if meeting_url:
+            item['meeting_url'] = meeting_url
         if source_file:
             source = Path(source_file).expanduser().resolve(strict=True)
             if not source.is_file():
@@ -199,7 +201,9 @@ def create(title, kind, model, language, transcribe_on_stop, source_file=None, c
     return item
 
 
-def start(title="Meeting", model="small", language=None, transcribe_on_stop=True, calendar_event=None, diarize=False, headphones=False, live_transcription=True):
+def start(title="Meeting", model="small", language=None, transcribe_on_stop=True, calendar_event=None, diarize=False, headphones=False, live_transcription=True, meeting_url=None):
+    from calendar_links import validate_meet_url
+    meeting_url = validate_meet_url(meeting_url)
     if sys.platform != "darwin" or not capture_binary().is_file():
         raise ValueError("Recording needs macOS 15+ and the native helper. Run scripts/setup.py.")
     if transcribe_on_stop or live_transcription:
@@ -209,7 +213,7 @@ def start(title="Meeting", model="small", language=None, transcribe_on_stop=True
     if diarize:
         from diarization import require_available
         require_available()
-    item = create(title, "capture", model, language, transcribe_on_stop, calendar_event=calendar_event, diarize=diarize, headphones=headphones, live_transcription=live_transcription)
+    item = create(title, "capture", model, language, transcribe_on_stop, calendar_event=calendar_event, diarize=diarize, headphones=headphones, live_transcription=live_transcription, meeting_url=meeting_url)
     # Return actual capture status, never claim recording merely because spawned.
     for _ in range(30):
         item = get(item["id"])
@@ -466,6 +470,8 @@ def read_transcript(meeting_id, offset=0, limit=100):
     transcript.update(total_segments=total, offset=offset, next_offset=offset + limit if offset + limit < total else None)
     if item.get("calendar_event"):
         transcript["calendar_event"] = item["calendar_event"]
+    if item.get('meeting_url'):
+        transcript['meeting_url'] = item['meeting_url']
     return transcript
 
 
@@ -523,6 +529,8 @@ def handoff(meeting_id, area, brief, include_transcript=False, destination_direc
                "delivery": "local_file_only; no message sent"}
     if item.get("calendar_event"):
         payload["calendar_event"] = item["calendar_event"]
+    if item.get('meeting_url'):
+        payload['meeting_url'] = item['meeting_url']
     analysis_path = directory / "analysis.json"
     if analysis_path.exists():
         saved = json.loads(analysis_path.read_text())
@@ -550,6 +558,8 @@ def handoff(meeting_id, area, brief, include_transcript=False, destination_direc
         lines += ["", "## Calendar event", "", f"{event['title']} — {event['start']} → {event['end']}",
                   f"Calendar: {event['calendar_id']}; event: {event['event_id']}"]
         lines += [event[key] for key in ("event_url", "meet_url") if event.get(key)]
+    if payload.get('meeting_url'):
+        lines += ['', '## Meeting link', '', payload['meeting_url']]
     if payload.get("speaker_note"):
         lines += ["", "## Speaker attribution", "", payload["speaker_note"]]
         lines += [f"- {speaker['id']}: {speaker.get('name') or 'unnamed'} (user-supplied alias; {speaker['source']})" for speaker in payload["speakers"]]

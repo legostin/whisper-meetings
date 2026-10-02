@@ -36,6 +36,12 @@ def main():
                     "-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", str(PLUGIN / "native/Info.plist"),
                     "-o", str(binary)], check=True)
     subprocess.run(["codesign", "--force", "--sign", "-", "--identifier", "in.legost.whisper-meetings.capture", str(binary)], check=True)
+    google_binary = runtime / 'google-credentials'
+    subprocess.run(['xcrun', 'swiftc', '-O', '-parse-as-library', '-swift-version', '5',
+                    '-target', architecture + '-apple-macosx15.0', str(PLUGIN / 'native/GoogleCredentials.swift'),
+                    '-Xlinker', '-sectcreate', '-Xlinker', '__TEXT', '-Xlinker', '__info_plist',
+                    '-Xlinker', str(PLUGIN / 'native/GoogleCredentials.plist'), '-o', str(google_binary)], check=True)
+    subprocess.run(['codesign', '--force', '--sign', '-', '--identifier', 'in.legost.whisper-meetings.google', str(google_binary)], check=True)
     if not args.skip_model:
         subprocess.run([str(runtime / ".venv/bin/python"), str(PLUGIN / "scripts/download_model.py"), args.model], check=True)
     if args.diarization:

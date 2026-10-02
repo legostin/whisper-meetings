@@ -1,11 +1,26 @@
-"""Optional event metadata supplied by the host or user. No OAuth, Google API calls,
-account tokens, automatic recording, or writes to the user's calendar.
-"""
+"""Validated minimal meeting associations and direct Google picker metadata."""
 import json
 from datetime import datetime
 from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 import meetings
+
+
+def validate_meet_url(value):
+    if value is None or not value.strip():
+        return None
+    value = value.strip()
+    url = urlparse(value)
+    if (url.scheme != 'https' or url.hostname != 'meet.google.com' or url.username or url.password
+            or url.port not in (None, 443) or not url.path.strip('/')):
+        raise ValueError('Paste a valid HTTPS Google Meet link')
+    return value
+
+
+def link_url(meeting_id, value):
+    url = validate_meet_url(value)
+    item = meetings.update(meeting_id, meeting_url=url)
+    return {'meeting_id': item['id'], 'meeting_url': url, 'calendar_modified': False}
 
 
 class CalendarEvent(BaseModel):
@@ -59,7 +74,10 @@ class CalendarEvent(BaseModel):
 
 def options():
     path = meetings.data_home() / 'calendar-events.json'
-    return json.loads(path.read_text()) if path.exists() else {'events': [], 'updated_at': None}
+    payload = json.loads(path.read_text()) if path.exists() else {'events': [], 'updated_at': None}
+    import google_calendar
+    payload['connection'] = {key: value for key, value in google_calendar.state().items() if key != 'flow'}
+    return payload
 
 
 def stage(events):

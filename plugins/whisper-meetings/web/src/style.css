@@ -14,3 +14,5 @@
 .capture-source{grid-column:1/-1}.capture-source .checkbox-label{margin:0}.capture-source .small-text{margin:5px 0 0}.overview-section{margin:16px 0}.overview-section h3{margin-bottom:8px}.overview-section ul{margin:0;padding-left:20px}.overview-section li{font-size:13px;line-height:1.6;margin:7px 0;overflow-wrap:anywhere}
 
 #pause-button{grid-column:1/-1}.status-pill.paused{background:var(--subtle);color:var(--muted)}
+
+.calendar-binding{grid-template-columns:minmax(0,1fr)}.calendar-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.calendar-toolbar #calendar-status{margin:0;margin-right:auto}.calendar-toolbar .secondary{justify-self:auto}.calendar-binding>p{grid-column:1;margin:0}.meet-link-entry .field{margin-top:10px}.meet-link-entry button{margin-top:6px}

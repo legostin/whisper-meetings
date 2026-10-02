@@ -36,9 +36,9 @@ async def main(plugin, fixture, language='en', diarize=False):
                 await session.initialize()
                 tools = await session.list_tools()
                 print("MCP tools:", len(tools.tools), flush=True)
-                assert len(tools.tools) == 22
+                assert len(tools.tools) == 26
                 panel = next(t for t in tools.tools if t.name == "meetings_open_panel")
-                assert panel.meta["ui"]["resourceUri"] == "ui://whisper-meetings/panel-0.5.0.html"
+                assert panel.meta["ui"]["resourceUri"] == "ui://whisper-meetings/panel-0.6.0.html"
                 resource = await session.read_resource(panel.meta["ui"]["resourceUri"])
                 assert resource.contents[0].mimeType == "text/html;profile=mcp-app"
                 assert "Whisper Meetings" in resource.contents[0].text
