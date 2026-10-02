@@ -20,7 +20,7 @@ Setup uses uv to install a Python 3.12 runtime and locked dependencies, builds t
 
 ## Update
 
-Stop any active recording first. To update an existing checkout and replace the marketplace's pinned release:
+Stop any active recording first: installing a plugin can replace its previous cached source files, which an existing recording worker may still need. To update an existing checkout and replace the marketplace's pinned release:
 
 ```sh
 git fetch origin --tags
