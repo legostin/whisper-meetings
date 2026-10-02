@@ -1,38 +1,62 @@
 # Whisper Meetings
 
-Local microphone recording (plus Mac audio when headphones are confirmed), offline Whisper transcription, and an MCP Apps meeting workspace for Codex. Optional Calendar/Meet event binding uses minimal metadata explicitly supplied by the user or host. Current-agent analysis and cross-chat delivery depend on host capabilities.
+Record meeting audio on your Mac, transcribe it locally with Whisper, and ask Codex for structured reports and context for other chats.
 
-This is an independent macOS 15+ project, not an official OpenAI, Apple, Google or Zoom product. Version 0.4.1 is a prerelease; see the repository's validation notes for tested behavior and limitations.
+**Version 0.4.1 · Preview release · macOS 15+**
 
-## Setup
+[Full installation guide](https://github.com/legostin/whisper-meetings#install) · [Usage guide](https://github.com/legostin/whisper-meetings/blob/main/docs/USAGE.md) · [Support](https://github.com/legostin/whisper-meetings/issues)
 
-Install [uv](https://docs.astral.sh/uv/) and Apple Command Line Tools/Xcode. From this directory:
+## Set up the local runtime
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and Apple Command Line Tools or Xcode. From this plugin directory:
 
 ```sh
 python3 scripts/setup.py
 ```
 
-Setup installs locked Python dependencies into `~/.local/share/whisper-meetings/runtime/`, compiles the recorder and downloads the selected `small` model. Setup is explicit and needs the network; subsequent transcription uses only installed model files. No API key is required. Use `--skip-model` for runtime/capture only or `--model base` for a smaller model. Run `scripts/download_model.py` with the runtime Python to add another model.
+Setup builds the recorder, installs locked Python dependencies and downloads the default Whisper `small` model. The first setup needs internet access; transcription then uses installed local model files. No OpenAI API key or Hugging Face account is required by the plugin.
 
-Optional speaker processing on Apple Silicon requires Swift 6.2+:
+Use `--model base` for a smaller model or `--skip-model` to build the runtime and recorder without downloading a model.
+
+## Start using it
+
+Ask Codex: **“Open the meeting panel.”**
+
+1. Enter a title and set **I am wearing headphones** to match your audio setup.
+2. Click **Start recording** and allow the requested macOS audio permissions.
+3. Click **Stop recording**. With **Transcribe after stopping** enabled, Whisper processes the saved audio.
+4. Click **Analyze with Codex** under **Decisions & tasks** for a report.
+
+Unchecked headphones means microphone only; remote voices must be audible through your speakers. Checked headphones means microphone and all Mac playback, including other apps. The source choice is locked during recording.
+
+The interface is English. Automatic, Russian and English speech-language choices remain available. Reports use your requested language or otherwise the transcript language. Opening the panel never starts recording.
+
+## Optional speaker detection
+
+On Apple Silicon with Swift 6.2 or later:
 
 ```sh
 python3 scripts/setup.py --diarization
 ```
 
-This builds a pinned native FluidAudio helper and downloads public Community-1-derived Core ML assets. No Hugging Face login, token or API key is needed. Enable “Distinguish speakers” before capture/import or identify speakers in a ready recording. Speaker assignment is an estimate; overlapping/ambiguous words are not assigned to one person. Diarization does not recover missing words. Renaming or reprocessing changes the transcript hash, invalidating old analysis. Russian ASR supports automatic detection and explicit `language="ru"`.
+This builds a pinned FluidAudio helper and downloads public Core ML models without a login or token. Enable **Distinguish speakers** before recording/importing, or click **Identify speakers** on a transcribed meeting.
 
-The host starts `mcp.json` over stdio. Opening the panel never starts recording. Ask “Open the meeting panel”, “Start recording this meeting”, “Stop without transcription”, or “Analyze the last meeting”. Stop an active recording before uninstalling or disabling the plugin; detached jobs survive MCP reconnects. Maximum capture duration is twelve hours.
+Labels estimate voices within one meeting and channel; names are user-supplied. Overlap and ambiguous attribution remain marked. Detection cannot recover lost words. Renaming or reprocessing invalidates the old analysis; analyze again. A speaker-processing failure preserves the successful Whisper transcript.
 
-The unchecked headphones checkbox records microphone only via AVAudioEngine. Speakers must be audible for remote voices to reach the microphone. Confirming headphones enables microphone + all Mac playback, including other apps. Microphone-only mode does not request screen recording permission. Channel labels are not speaker identities. Transcripts can be incorrect, especially with overlapping voices. Streamed live captions are not included. Optional local Core ML diarization estimates speakers and preserves overlap intervals; names are user-supplied aliases scoped to one meeting/channel.
+## Calendar and other chats
 
-Calendar binding is optional. The server never reads/writes Google Calendar or stores Google credentials. A connected host integration can obtain events on an explicit request; the user selects which metadata to attach. Attaching an event does not join Meet or begin capture. The same metadata can be supplied directly without a connector.
+**Choose from Google Calendar** asks the host to obtain selected events through an available, separately connected calendar integration. The plugin stores minimal event metadata and Calendar/Meet links. It does not store Google credentials, modify events, join Meet or start recording when an event is attached.
 
-Audio stays local. Text read/analyzed by the current agent is processed under that host/model provider's settings. Preparing a handoff writes local files; sending it to a named chat is a separate, explicit request handled by the host.
+**Another agent** prepares local Markdown/JSON context packages. Sending a package is a separate, explicit request to Codex with an exact recipient chat name. Delivery and panel rendering depend on the host's capabilities.
 
-Full installation, development and validation: [repository](https://github.com/legostin/whisper-meetings).
-[Privacy policy](PRIVACY.md) · [Usage terms](TERMS.md) · [Support](https://github.com/legostin/whisper-meetings/issues).
+## Data and limits
 
-Reports use a short opening and themed bullet sections, followed by decisions, tasks, risks and open questions. Recording links and segment IDs are omitted from the UI and human-readable reports; evidence metadata remains in structured JSON. `scripts/refresh_reports.py` reformats existing local Markdown reports without modifying their JSON or audio.
+Audio stays on your Mac. Text read by the Codex agent is processed under that host/model provider's settings. Reports contain a short opening, themed points, decisions, tasks and risks, without visible recording links or segment IDs; JSON retains internal evidence validation.
 
-The interface is currently English only. Speech language is independent: automatic detection, Russian and English remain available. Analysis requests use the requested report language or otherwise the transcript language; existing reports are preserved.
+The default archive is `~/.local/share/whisper-meetings/`, outside the plugin cache. It survives updates and has no automatic deletion. `WHISPER_MEETINGS_HOME` changes the directory.
+
+Stop recording before disabling or uninstalling the plugin: background jobs survive MCP reconnects. One recording can run at a time, with a twelve-hour maximum. Transcription starts after stopping; live captions are not included.
+
+This preview release still needs live device and production-host verification. It has not been approved for the OpenAI Plugins Directory. See [validation results](https://github.com/legostin/whisper-meetings/blob/main/VALIDATION.md).
+
+[Privacy policy](PRIVACY.md) · [Usage terms](TERMS.md) · [License](LICENSE)
