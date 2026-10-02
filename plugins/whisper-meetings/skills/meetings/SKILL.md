@@ -1,6 +1,6 @@
 ---
 name: meetings
-description: Record meetings on a Mac, stop recording, enable or disable local Whisper transcription, transcribe existing recordings, analyze meeting decisions and action items, or prepare context for another agent. Use for explicit meeting recording/transcription requests in Russian or English.
+description: Record meetings on a Mac, pause, resume or stop recording, enable or disable local Whisper transcription, transcribe existing recordings, analyze meeting decisions and action items, or prepare context for another agent. Use for explicit meeting recording/transcription requests in Russian or English.
 ---
 
 For an interactive dashboard, call `meetings_open_panel` on an explicit request to open the meeting panel. It exposes an MCP Apps UI; if the host does not render it, continue with the individual tools. Opening the panel never authorizes capture.
@@ -9,17 +9,26 @@ Use the `whisper_meetings` MCP tools for capture and transcription. If unavailab
 
 ## Record and stop
 
-- For "начни запись встречи" / "start recording", call `meetings_doctor` then `meetings_start`. Default: microphone only (`headphones=false`), model `small`, automatic language detection, transcription after stop. Set `headphones=true` only if the user has confirmed headphones; that records microphone AND all Mac playback. Never infer headphones from a previous call or device name. Explain that without headphones remote voices must be audible through speakers; muted/quiet speakers may be missed. A title is optional.
+- For "начни запись встречи" / "start recording", call `meetings_doctor` then `meetings_start`. Default: microphone only (`headphones=false`), model `small`, automatic language detection, provisional live transcription plus final transcription after stop. Set `headphones=true` only if the user has confirmed headphones; that records microphone AND all Mac playback. Never infer headphones from a previous call or device name. Explain that without headphones remote voices must be audible through speakers; muted/quiet speakers may be missed. A title is optional.
 - Record only on a direct user recording request. Preparing or installing the plugin does not itself authorize starting a real recording. Never start capture automatically when a chat opens or the plugin is enabled.
 - A `starting` result means capture is waiting to start, possibly for macOS permissions. Report this state truthfully. Use `meetings_status` to confirm `recording`. If permissions are denied, explain the actual error and the relevant macOS setting.
+- For "пауза" / "pause recording", call `meetings_pause`; pausing is not confirmed until status says paused. Resume only on a direct user request with `meetings_resume`; wait for recording after resuming. Paused audio is discarded and excluded from the timeline. Stop works while paused.
 - For "останови запись", call `meetings_stop`. `stopping`, `queued`, `transcribing` are unfinished states. Read status to distinguish `recorded` (audio only), `ready` (transcript complete), and `failed`/`interrupted`.
-- For "отключи расшифровку", call `meetings_set_transcription(enabled=false)` on the active meeting. Recording continues and the audio remains local. This switches off transcription after stop; it does not abort a job already transcribing. "Останови без расшифровки" means `meetings_stop(transcribe=false)`.
-- For "включи расшифровку", enable it on the active meeting or call `meetings_transcribe` for saved audio. Use `meetings_import` for a user-selected local audio/video file. Only installed models are usable; no silent model downloads.
+- For "отключи расшифровку", call `meetings_set_transcription(enabled=false)` on the active meeting. Recording continues and the audio remains local. Also call `meetings_set_live_transcription(enabled=false)` when the user means all transcription; this does not stop audio. The final toggle alone switches off transcription after stop; it does not abort a job already transcribing. "Останови без расшифровки" means `meetings_stop(transcribe=false)`.
+- For "включи расшифровку", enable live and final transcription on the active meeting or call `meetings_transcribe` for saved audio. Use `meetings_import` for a user-selected local audio/video file. Only installed models are usable; no silent model downloads.
 - The worker survives MCP connection shutdown. Disabling/uninstalling the plugin does not stop an active recording. Tell the user to stop first. Recordings stop automatically after twelve hours.
+
+## Live transcript
+
+- New recordings default to `live_transcription=true`. To record audio without any ASR, set both `live_transcription=false` and `transcribe_on_stop=false`.
+- Use `meetings_set_live_transcription` to switch live text independently of final ASR. An already decoding chunk may finish. Native upgrades require explicit setup; never claim an old recorder supports these features.
+- `meetings_read_live_transcript` reads provisional local text from finalized ~12-second chunks plus inference time. Latency depends on CPU, model and the shared model queue. It is partial and may contain chunk-boundary errors. No reliable speaker identities or final evidence hash are available during capture.
+- Never present a live draft as a complete transcript or save it as final analysis. After stopping, wait for ready and read the final transcript. Speaker estimation follows final ASR.
+- A live error does not stop audio capture. Inspect live_error, retain the audio, and retry live processing by disabling/enabling it or transcribe after stop.
 
 ## Speakers and Russian
 
-- Russian is supported by multilingual Whisper. Default language detection is automatic. Use `language="ru"` when the user explicitly wants Russian speech recognition; the RU/EN interface language is independent.
+- Russian is supported by multilingual Whisper. Default language detection is automatic. Use `language="ru"` when the user explicitly wants Russian speech recognition; the English interface is independent.
 - Diarization is optional and disabled by default. On an explicit request, use `diarize=true` on start/import/transcribe, or `meetings_diarize` on a ready meeting with retained audio. Read doctor setup first. No model is silently downloaded. Setup uses public Core ML models with no account/token requirement; do not ask the user for a Hugging Face token.
 - `diarizing` is unfinished. Poll status. If optional processing fails, the ASR transcript remains ready and `diarization_error` explains the limitation. Do not claim completed diarization in that case.
 - Read transcript speaker metadata and per-segment/word `speaker_id`, `speaker_ids`, `speaker_assignment` and `overlapping_speech`. IDs are not names or verified identities. Different channel IDs may represent the same person through echo. There is no voiceprint persistence or cross-meeting identity recognition.

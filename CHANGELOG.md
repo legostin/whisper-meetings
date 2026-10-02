@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — 2026-10-02
+
+- Pause/resume recording with native acknowledgement; paused audio is excluded from both tracks and the recording timeline. Stop works while paused.
+- Optional, default-on provisional local Whisper text from finalized ~12-second chunks during recording. Capture runs independently of ASR.
+- Independent live/final transcription switches; provisional text is paginated and excluded from final evidence-backed analysis. Final ASR and optional speaker detection run after stop.
+- Pause-aware timer, live draft display and failure recovery. Four new MCP tools.
+- Controlled native two-track/microphone pause and chunk-writer checks, live worker smoke with actual offline Russian recognition, and lifecycle regression tests.
+- Upgrades require rebuilding the local recorder with `python3 plugins/whisper-meetings/scripts/setup.py --skip-model`. Models and archives are reused.
+
 ## 0.4.1 — 2026-10-02
 
 - English-only interface and install listing; removed Russian interface copy and RU/EN switch.

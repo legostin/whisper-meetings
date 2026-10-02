@@ -25,7 +25,7 @@ assert not list(PLUGIN.rglob('node_modules'))
 
 async def check():
     tools=await server.mcp.list_tools()
-    assert len(tools)==18
+    assert len(tools)==22
     for tool in tools:
         assert tool.description and tool.inputSchema['type']=='object'
         assert all(isinstance(getattr(tool.annotations,key),bool) for key in ('readOnlyHint','destructiveHint','openWorldHint'))

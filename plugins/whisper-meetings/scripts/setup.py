@@ -30,7 +30,7 @@ def main():
         shutil.copyfile(PLUGIN / name, runtime / name)
     subprocess.run([uv, "sync", "--project", str(runtime), "--python", "3.12", "--frozen", "--no-dev"], check=True)
     architecture = platform.machine()
-    binary = runtime / "capture"
+    binary = runtime / "capture-0.5.0"
     subprocess.run(["xcrun", "swiftc", "-O", "-parse-as-library", "-swift-version", "5",
                     "-target", architecture + "-apple-macosx15.0", str(PLUGIN / "native/Capture.swift"),
                     "-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", str(PLUGIN / "native/Info.plist"),

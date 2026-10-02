@@ -4,6 +4,8 @@ These are repeatable cases for preparing a future OpenAI submission. No reviewer
 
 | Positive scenario | Prompt / UI action | Expected tools | Expected behavior | Current evidence |
 |---|---|---|---|---|
+| Pause / resume | Pause, resume, then stop while paused | meetings_pause, meetings_resume, meetings_stop | Native acknowledgement, frozen timer, excluded paused PCM, same meeting | Controlled native writer and lifecycle tests passed; live device pending |
+| Live draft | Start with live text enabled | meetings_start, meetings_read_live_transcript, meetings_set_live_transcription | Provisional local chunk text; independent final processing; no final analysis of drafts | Actual offline Russian live worker passed; production host pending |
 | Headphone choice | Start a simulated meeting with headphones unchecked/checked | meetings_start, meetings_stop | Only microphone by default; microphone + Mac when checked; selection locked during recording | Native PCM writer + routing tests; SDK preview passed; live devices pending |
 | Readable report | Analyze/save and read report | meetings_save_analysis, meetings_read_analysis | Short opening, themed points, no visible recording references; evidence kept internally | Source/installed smoke, export tests and SDK preview passed |
 | Open controls | Open the meeting panel | meetings_open_panel, app-only meetings_panel_state | UI opens without recording or uploading audio | Protocol + SDK preview verified; production host pending |

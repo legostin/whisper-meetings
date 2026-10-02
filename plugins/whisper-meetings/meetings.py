@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parent
-ACTIVE = ("starting", "recording", "stopping")
+ACTIVE = ("starting", "recording", "pausing", "paused", "resuming", "stopping")
 RUNNING = (*ACTIVE, "queued", "transcribing", "diarizing")
 
 
@@ -114,7 +114,13 @@ def list_meetings(limit=20):
 
 
 def capture_binary():
-    return data_home() / "runtime" / "capture"
+    current = data_home() / 'runtime' / 'capture-0.5.0'
+    return current if current.is_file() else data_home() / 'runtime' / 'capture'
+
+
+def meeting_capture_binary(item):
+    # Old running meetings retain the old helper even after installing a new one.
+    return Path(item.get('capture_executable', str(data_home() / 'runtime' / 'capture')))
 
 
 def model_path(model):
@@ -152,7 +158,7 @@ def spawn(meeting_id, mode):
                          stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
 
 
-def create(title, kind, model, language, transcribe_on_stop, source_file=None, calendar_event=None, diarize=False, headphones=False):
+def create(title, kind, model, language, transcribe_on_stop, source_file=None, calendar_event=None, diarize=False, headphones=False, live_transcription=False):
     if not title.strip() or len(title) > 240:
         raise ValueError("title must contain 1..240 characters")
     model_path(model)
@@ -160,7 +166,7 @@ def create(title, kind, model, language, transcribe_on_stop, source_file=None, c
         raise ValueError("language must be an ISO language code (ru, en, kk) or null for detection")
     with database() as db:
         reconcile(db)
-        if kind == "capture" and db.execute("SELECT 1 FROM meetings WHERE state IN ('starting','recording','stopping')").fetchone():
+        if kind == "capture" and db.execute("SELECT 1 FROM meetings WHERE state IN ('starting','recording','pausing','paused','resuming','stopping')").fetchone():
             raise ValueError("A recording is already active. Stop it before starting another meeting.")
         identity = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:10]
         directory = data_home() / "meetings" / identity
@@ -170,7 +176,11 @@ def create(title, kind, model, language, transcribe_on_stop, source_file=None, c
                 "model": model, "language": language, "transcribe_on_stop": transcribe_on_stop,
                 "tracks": {}, "error": None, "diarize_on_stop": diarize, "diarization_status": "pending" if diarize else "disabled"}
         if kind == 'capture':
-            item.update(headphones=headphones, capture_sources=['microphone', 'system'] if headphones else ['microphone'])
+            item.update(headphones=headphones, capture_sources=['microphone', 'system'] if headphones else ['microphone'],
+                        live_transcription=live_transcription, live_status='waiting' if live_transcription else 'off',
+                        elapsed_seconds=0, capture_executable=str(capture_binary()), capture_protocol=2 if capture_binary().name=='capture-0.5.0' else 1)
+            if live_transcription:
+                (directory / 'live-enabled').touch()
         if calendar_event:
             item["calendar_event"] = calendar_event
         if source_file:
@@ -189,15 +199,17 @@ def create(title, kind, model, language, transcribe_on_stop, source_file=None, c
     return item
 
 
-def start(title="Встреча", model="small", language=None, transcribe_on_stop=True, calendar_event=None, diarize=False, headphones=False):
+def start(title="Meeting", model="small", language=None, transcribe_on_stop=True, calendar_event=None, diarize=False, headphones=False, live_transcription=True):
     if sys.platform != "darwin" or not capture_binary().is_file():
         raise ValueError("Recording needs macOS 15+ and the native helper. Run scripts/setup.py.")
-    if transcribe_on_stop:
+    if transcribe_on_stop or live_transcription:
         require_model(model)
+    if live_transcription:
+        require_capture_feature("live_chunks")
     if diarize:
         from diarization import require_available
         require_available()
-    item = create(title, "capture", model, language, transcribe_on_stop, calendar_event=calendar_event, diarize=diarize, headphones=headphones)
+    item = create(title, "capture", model, language, transcribe_on_stop, calendar_event=calendar_event, diarize=diarize, headphones=headphones, live_transcription=live_transcription)
     # Return actual capture status, never claim recording merely because spawned.
     for _ in range(30):
         item = get(item["id"])
@@ -211,7 +223,7 @@ def stop(meeting_id=None, transcribe=None):
     with database() as db:
         reconcile(db)
         if meeting_id is None:
-            row = db.execute("SELECT * FROM meetings WHERE state IN ('starting','recording','stopping') ORDER BY created DESC LIMIT 1").fetchone()
+            row = db.execute("SELECT * FROM meetings WHERE state IN ('starting','recording','pausing','paused','resuming','stopping') ORDER BY created DESC LIMIT 1").fetchone()
         else:
             row = db.execute("SELECT * FROM meetings WHERE id=?", (meeting_id,)).fetchone()
         if not row:
@@ -225,6 +237,98 @@ def stop(meeting_id=None, transcribe=None):
         save(db, item)
         (Path(item["directory"]) / "stop-requested").touch()
     return item
+
+
+def require_capture_feature(feature, binary=None):
+    check = subprocess.run([str(binary or capture_binary()), '--check'], capture_output=True, text=True, timeout=15)
+    if check.returncode or not json.loads(check.stdout).get(feature):
+        raise ValueError('Rebuild the recorder for pause/live transcription: python3 scripts/setup.py --skip-model')
+
+
+def set_paused(meeting_id, paused):
+    require_capture_feature('pause_resume', meeting_capture_binary(get(meeting_id)))
+    with database() as db:
+        row = db.execute('SELECT * FROM meetings WHERE id=?', (meeting_id,)).fetchone()
+        if row is None:
+            raise ValueError('Meeting not found')
+        item = decode(row)
+        if item['state'] not in {'recording', 'pausing', 'paused', 'resuming'}:
+            raise ValueError('Pause/resume requires an active, started recording')
+        settled = 'paused' if paused else 'recording'
+        requested = 'pausing' if paused else 'resuming'
+        if item['state'] == settled:
+            return item
+        marker = Path(item['directory']) / 'pause-requested'
+        if paused:
+            marker.touch()
+        else:
+            marker.unlink(missing_ok=True)
+        item['state'] = requested
+        save(db, item)
+    return item
+
+
+def sync_capture_state(meeting_id):
+    with database() as db:
+        item = decode(db.execute('SELECT * FROM meetings WHERE id=?', (meeting_id,)).fetchone())
+        path = Path(item['directory']) / 'capture-state.json'
+        if not path.exists():
+            return item
+        native = json.loads(path.read_text())
+        paused = native['paused']
+        desired = (Path(item['directory']) / 'pause-requested').exists()
+        # Only acknowledge a matching native state; never resurrect a stopped job.
+        if item['state'] in {'recording', 'pausing', 'paused', 'resuming'} and paused == desired:
+            item['state'] = 'paused' if paused else 'recording'
+        item['elapsed_seconds'] = native['elapsed_seconds']
+        save(db, item)
+        return item
+
+
+def set_live_transcription(meeting_id, enabled):
+    if enabled:
+        require_capture_feature('live_chunks', meeting_capture_binary(get(meeting_id)))
+    with database() as db:
+        row = db.execute('SELECT * FROM meetings WHERE id=?', (meeting_id,)).fetchone()
+        if row is None:
+            raise ValueError('Meeting not found')
+        item = decode(row)
+        if item['state'] not in ACTIVE or item['state'] == 'stopping':
+            raise ValueError('Live transcription requires an active recording')
+        if enabled:
+            require_model(item['model'])
+        marker = Path(item['directory']) / 'live-enabled'
+        if enabled:
+            marker.touch()
+        else:
+            marker.unlink(missing_ok=True)
+        item.update(live_transcription=enabled, live_status='waiting' if enabled else 'off', live_error=None)
+        save(db, item)
+    return item
+
+
+def fail_live(meeting_id, error):
+    with database() as db:
+        item = decode(db.execute('SELECT * FROM meetings WHERE id=?', (meeting_id,)).fetchone())
+        (Path(item['directory']) / 'live-enabled').unlink(missing_ok=True)
+        item.update(live_status='failed', live_error=str(error), live_transcription=False)
+        save(db, item)
+    return item
+
+
+def read_live_transcript(meeting_id, offset=0, limit=100):
+    if offset < 0 or not 1 <= limit <= 300:
+        raise ValueError('offset must be nonnegative; limit must be 1..300')
+    item = get(meeting_id)
+    path = Path(item['directory']) / 'live-transcript.json'
+    draft = json.loads(path.read_text()) if path.exists() else {'segments': [], 'languages': {}, 'provisional': True}
+    total = len(draft['segments'])
+    draft.pop('processed_chunks', None)
+    draft['segments'] = draft['segments'][offset:offset + limit]
+    draft.update(meeting_id=meeting_id, provisional=True, total_segments=total, offset=offset,
+                 next_offset=offset + limit if offset + limit < total else None,
+                 live_status=item.get('live_status', 'off'), live_error=item.get('live_error'))
+    return draft
 
 
 def set_transcription(meeting_id, enabled):

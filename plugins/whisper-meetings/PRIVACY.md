@@ -1,6 +1,6 @@
 # Whisper Meetings privacy policy
 
-Effective date: October 1, 2026. Publisher: [legostin](https://github.com/legostin).
+Effective date: October 2, 2026. Publisher: [legostin](https://github.com/legostin).
 Support: [GitHub Issues](https://github.com/legostin/whisper-meetings/issues).
 
 Whisper Meetings is a local application for macOS. Recording begins only after a user requests it. By default it records the microphone only. Confirming headphones additionally records all Mac playback, which can include voices, other applications and notifications. Obtain the permissions needed for your meeting. It stores the audio, meeting title and times, transcription, optional analysis and handoff packages on the user's computer. It does not save video or screen images.
@@ -8,6 +8,8 @@ Whisper Meetings is a local application for macOS. Recording begins only after a
 Optional calendar binding stores only event/calendar identifiers, title, start/end times and Calendar/Meet links supplied by the user or host. It does not store attendees, event descriptions, Google credentials or OAuth tokens. A connected host calendar integration has its own permissions and privacy policy. Whisper Meetings does not read or change Google Calendar directly.
 
 Whisper transcription runs locally with the installed model. The publisher operates no meeting backend, collects no analytics and receives no recordings, transcripts or account information. The embedded UI contains no remote assets or tracking. Installation downloads dependencies and model files from their registries/providers; those providers may receive normal request information such as IP address. The publisher does not receive it.
+
+New recordings enable provisional live transcription by default. Finalized short audio chunks and draft text stay in the local meeting folder; processed temporary chunks are deleted, while full audio and draft text remain. You can disable live transcription independently of final transcription. Pausing discards newly arriving audio until recording resumes; wait for the confirmed Paused state.
 
 Optional diarization also runs locally. It stores estimated speaker labels, time intervals, overlap/uncertainty flags and user-supplied names in the meeting archive. Labels are scoped to each meeting/channel. Speaker embeddings stay in process memory and are not saved or matched across meetings. This feature does not verify personal identity. Its public model downloads use no Hugging Face account or token; SDK/model licenses and notices remain in the local runtime/model folders.
 

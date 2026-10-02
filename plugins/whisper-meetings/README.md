@@ -2,7 +2,7 @@
 
 Record meeting audio on your Mac, transcribe it locally with Whisper, and ask Codex for structured reports and context for other chats.
 
-**Version 0.4.1 · Preview release · macOS 15+**
+**Version 0.5.0 · Preview release · macOS 15+**
 
 [Full installation guide](https://github.com/legostin/whisper-meetings#install) · [Usage guide](https://github.com/legostin/whisper-meetings/blob/main/docs/USAGE.md) · [Support](https://github.com/legostin/whisper-meetings/issues)
 
@@ -23,7 +23,7 @@ Use `--model base` for a smaller model or `--skip-model` to build the runtime an
 Ask Codex: **“Open the meeting panel.”**
 
 1. Enter a title and set **I am wearing headphones** to match your audio setup.
-2. Click **Start recording** and allow the requested macOS audio permissions.
+2. Click **Start recording** and allow the requested macOS audio permissions. **Transcribe during recording** shows provisional text in short chunks; use **Pause recording** / **Resume recording** to exclude breaks.
 3. Click **Stop recording**. With **Transcribe after stopping** enabled, Whisper processes the saved audio.
 4. Click **Analyze with Codex** under **Decisions & tasks** for a report.
 
@@ -55,7 +55,7 @@ Audio stays on your Mac. Text read by the Codex agent is processed under that ho
 
 The default archive is `~/.local/share/whisper-meetings/`, outside the plugin cache. It survives updates and has no automatic deletion. `WHISPER_MEETINGS_HOME` changes the directory.
 
-Stop recording before disabling or uninstalling the plugin: background jobs survive MCP reconnects. One recording can run at a time, with a twelve-hour maximum. Transcription starts after stopping; live captions are not included.
+Stop recording before disabling or uninstalling the plugin: background jobs survive MCP reconnects. One recording can run at a time, with a twelve-hour maximum. Live text arrives in roughly 12-second chunks plus processing time and can contain boundary errors; final transcription and optional speaker detection run after stopping. Live/final controls are independent. A live failure retains audio and does not stop capture. Upgrading from 0.4.x requires rebuilding the recorder with `python3 scripts/setup.py --skip-model`.
 
 This preview release still needs live device and production-host verification. It has not been approved for the OpenAI Plugins Directory. See [validation results](https://github.com/legostin/whisper-meetings/blob/main/VALIDATION.md).
 

@@ -13,7 +13,13 @@ The choice is locked during recording. Two audio tracks use a shared timeline. C
 
 Only one recording can run at a time. The recording process survives MCP disconnects, so disabling the plugin does not stop it. Stop explicitly before uninstalling or disabling. The maximum recording duration is twelve hours; the native recorder also stops if its controlling job process is lost.
 
-Transcription runs after stopping. Disable **Transcribe after stopping** to keep an audio-only recording, then transcribe it later. A failed job retains audio and exposes the error for retry.
+Use **Pause recording** to discard audio during a break. Wait for **Paused**; **Pausing…** is not yet confirmed. The timer freezes and the paused interval is excluded from both tracks. **Resume recording** continues the same meeting; **Resuming…** becomes **Recording** after native acknowledgement. You can stop while paused.
+
+**Transcribe during recording** is enabled by default for new recordings. Whisper reads separate finalized ~12-second chunks locally. The panel displays recent provisional segments; `meetings_read_live_transcript` exposes the paginated draft. Chunk boundaries, CPU speed and the shared model queue can affect text and latency. Drafts do not have final evidence hashes or reliable speaker identities. Audio capture does not wait for transcription.
+
+Live and final transcription have independent switches. Turning live text off does not stop audio; an already decoding chunk may finish. A live error disables live chunk production, retains the draft and full audio, and leaves capture running. Re-enable live text to retry or process the saved audio later. Analysis and handoffs require the final ready transcript.
+
+Final transcription runs after stopping. Disable **Transcribe after stopping** to keep an audio-only recording, then transcribe it later. A failed job retains audio and exposes the error for retry.
 
 ## Transcripts and reports
 
@@ -72,7 +78,10 @@ meetings/<id>/
   microphone.wav                   When microphone capture is used
   system.wav                       When Mac playback capture is used
   meeting.json                     Meeting metadata
-  transcript.json                  Timed segments and source IDs
+  live-transcript.json             Optional provisional draft
+  live-chunks/                     Temporary finalized WAV chunks
+  capture-state.json               Native pause acknowledgement and timer
+  transcript.json                  Final timed segments and source IDs
   diarization.json                 Optional voice and overlap intervals
   transcript.md / .txt / .srt       Transcript exports
   analysis.json / .md              Agent-supplied report

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "whisper-meetings",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Record meetings on your Mac, transcribe with local Whisper, and analyze or hand off the results.",
   "author": {
     "name": "legostin",
@@ -22,7 +22,7 @@
       "interface": {
         "displayName": "Whisper Meetings",
         "shortDescription": "Local meeting recording and transcription",
-        "longDescription": "Record microphone audio by default; confirm headphones to include Mac playback. Transcribe offline with Whisper, then ask Codex for concise themed reports, decisions, tasks and context for other agents.",
+        "longDescription": "Record and pause meeting audio on your Mac. Read provisional local Whisper text during recording, then get final transcripts, speaker estimates and concise reports after stopping.",
         "developerName": "legostin",
         "category": "Productivity",
         "capabilities": [
@@ -33,7 +33,9 @@
           "Prepare context packages",
           "Link calendar events",
           "Estimate speakers",
-          "Mark overlapping speech"
+          "Mark overlapping speech",
+          "Pause and resume recording",
+          "Transcribe during recording"
         ],
         "defaultPrompt": [
           "Open the meeting panel",
@@ -53,7 +55,7 @@
       },
       "onboardingSkill": "./skills/meetings/SKILL.md",
       "publication": {
-        "release_notes": "0.4.1 prerelease: English-only interface and listing; removed RU/EN switch. Russian speech recognition remains available. Reports follow the requested or transcript language. Live capture and production-host panel mounting remain unverified."
+        "release_notes": "0.5.0 prerelease: pause/resume with native acknowledgements and compressed audio timelines; provisional local Whisper text from finalized ~12-second chunks; independent live/final transcription controls. Native writer and offline Russian live-worker checks passed; live calls and production host remain unverified. Rebuild the recorder with setup.py --skip-model when upgrading."
       }
     }
   },

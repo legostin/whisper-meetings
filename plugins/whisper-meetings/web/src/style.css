@@ -12,3 +12,5 @@
 .segment{grid-template-columns:minmax(0,1fr);gap:6px}.segment-meta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}.segment-meta .timestamp{margin-bottom:0}.segment-meta .speaker-name{min-width:0}
 
 .capture-source{grid-column:1/-1}.capture-source .checkbox-label{margin:0}.capture-source .small-text{margin:5px 0 0}.overview-section{margin:16px 0}.overview-section h3{margin-bottom:8px}.overview-section ul{margin:0;padding-left:20px}.overview-section li{font-size:13px;line-height:1.6;margin:7px 0;overflow-wrap:anywhere}
+
+#pause-button{grid-column:1/-1}.status-pill.paused{background:var(--subtle);color:var(--muted)}

@@ -67,6 +67,18 @@ For Russian recognition with optional speaker processing, add `--language auto -
 
 This generates temporary speech with macOS voices, processes an artificial overlap and removes the temporary audio. It is not a live-call accuracy benchmark. If you configured another data directory, adjust the runtime paths.
 
+## Live worker smoke
+
+Use the installed runtime Python and the synthetic Russian fixture described above:
+
+```sh
+~/.local/share/whisper-meetings/runtime/.venv/bin/python plugins/whisper-meetings/scripts/smoke_live.py /absolute/path/synthetic-russian.wav
+```
+
+This runs the actual offline Whisper live worker with a finalized test chunk while a synthetic meeting remains in recording state, reads its durable draft, and stops the worker. No input devices are opened. The fixture must contain the Russian release-planning sentences used by the smoke assertion.
+
+The native recorder's `--test-streaming-sinks DIRECTORY` mode exercises its production writers with generated PCM: 30 seconds including a five-second pause become two 25-second tracks, without paused samples. It also checks the microphone-only writer. Use a fresh temporary directory and inspect finalized chunk manifests/WAVs; this is not live device validation.
+
 ## Package
 
 ```sh

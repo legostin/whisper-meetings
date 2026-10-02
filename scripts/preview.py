@@ -47,10 +47,16 @@ def invoke(name, args):
     if name=='meetings_rename_speaker':
         speaker=next(s for s in SPEAKERS if s['id']==args['speaker_id']);speaker['name']=args['name'];SHA='demo-sha-renamed';item['transcript_sha256']=SHA;return {'speaker_id':speaker['id'],'name':speaker['name'],'transcript_sha256':SHA}
     if name=='meetings_start':
-        if any(m['state']=='recording' for m in MEETINGS):raise ValueError('Demo recording already active')
-        item={"id":"demo-active-"+secrets.token_hex(4),"title":args['title'],"state":"recording","created_at":datetime.now(timezone.utc).isoformat(),"started_at":datetime.now(timezone.utc).isoformat(),"model":args['model'],"transcribe_on_stop":args['transcribe_on_stop'],"diarize_on_stop":args.get('diarize',False),"language":args.get('language')}
+        if any(m['state'] in ('recording','paused') for m in MEETINGS):raise ValueError('Demo recording already active')
+        item={"id":"demo-active-"+secrets.token_hex(4),"title":args['title'],"state":"recording","created_at":datetime.now(timezone.utc).isoformat(),"started_at":datetime.now(timezone.utc).isoformat(),"model":args['model'],"transcribe_on_stop":args['transcribe_on_stop'],"diarize_on_stop":args.get('diarize',False),"language":args.get('language'),"kind":"capture","capture_protocol":2,"live_transcription":args.get("live_transcription",True),"live_segment_count":2,"live_updated_at":datetime.now(timezone.utc).isoformat(),"elapsed_seconds":24,"updated_at":datetime.now(timezone.utc).isoformat()}
         if args.get('calendar_event_id'):item['calendar_event']=EVENT
         item.update(headphones=args.get('headphones',False),capture_sources=['microphone','system'] if args.get('headphones',False) else ['microphone']);MEETINGS.insert(0,item);return item
+    if name=='meetings_pause':item.update(state='paused',updated_at=datetime.now(timezone.utc).isoformat());return item
+    if name=='meetings_resume':item.update(state='recording',updated_at=datetime.now(timezone.utc).isoformat());return item
+    if name=='meetings_set_live_transcription':item['live_transcription']=args['enabled'];return item
+    if name=='meetings_read_live_transcript':
+        segments=[{'id':'l00001','source':'microphone','start':0,'end':8,'text':'We agreed to release the first version on Friday.'},{'id':'l00002','source':'system','start':12,'end':20,'text':'I will prepare the installation guide and check it on a clean Mac.'}]
+        return {'provisional':True,'segments':segments,'total_segments':2,'next_offset':None}
     if name=='meetings_stop':item['state']='ready' if args.get('transcribe',item['transcribe_on_stop']) else 'recorded';return item
     if name=='meetings_set_transcription':item['transcribe_on_stop']=args['enabled'];return item
     if name=='meetings_transcribe':item['state']='ready';return item
@@ -66,7 +72,7 @@ window.addEventListener('message',async event=>{
  const msg=event.data;if(!msg || msg.jsonrpc!=='2.0' || msg.id===undefined)return;
  let result;
  try {
- if(msg.method==='ui/initialize')result={protocolVersion:msg.params.protocolVersion,hostInfo:{name:'Synthetic Preview Host',version:'0.4.1'},hostCapabilities:{serverTools:{},message:{text:{}},logging:{}},hostContext:{theme:'light',locale:'ru-RU',displayMode:'fullscreen',availableDisplayModes:['inline','fullscreen'],platform:'desktop'}};
+ if(msg.method==='ui/initialize')result={protocolVersion:msg.params.protocolVersion,hostInfo:{name:'Synthetic Preview Host',version:'0.5.0'},hostCapabilities:{serverTools:{},message:{text:{}},logging:{}},hostContext:{theme:'light',locale:'ru-RU',displayMode:'fullscreen',availableDisplayModes:['inline','fullscreen'],platform:'desktop'}};
  else if(msg.method==='ui/request-display-mode')result={mode:msg.params.mode};
  else if(msg.method==='tools/call'){const response=await fetch('/rpc',{method:'POST',headers:{'Content-Type':'application/json','X-Preview-Token':'TOKEN'},body:JSON.stringify(msg.params)});result=await response.json();}
  else if(msg.method==='ui/message'){await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json','X-Preview-Token':'TOKEN'},body:JSON.stringify(msg.params)});result={};document.querySelector('header').textContent='PREVIEW · Request received by test host · No message sent to Codex';}

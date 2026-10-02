@@ -24,16 +24,15 @@ Stop any active recording first. To update an existing checkout and replace the 
 
 ```sh
 git fetch origin --tags
-git checkout v0.4.1
+git checkout v0.5.0
 codex plugin marketplace remove whisper-local
-codex plugin marketplace add legostin/whisper-meetings --ref v0.4.1
+codex plugin marketplace add legostin/whisper-meetings --ref v0.5.0
 codex plugin add whisper-meetings@whisper-local
 ```
 
 Restart Codex or open a new chat to load the installed version. Removing the marketplace registration does not delete your separately stored meeting archive.
 
-Updating from **0.4.0** to **0.4.1** does not require rebuilding the recorder or downloading models. Updating from **0.3.0 or earlier** requires the new microphone-only recorder:
-
+Updating from **0.4.x or earlier** requires rebuilding the recorder for pause/resume and live chunks. Installed models are reused:
 ```sh
 python3 plugins/whisper-meetings/scripts/setup.py --skip-model
 ```
