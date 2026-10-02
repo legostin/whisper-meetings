@@ -59,17 +59,17 @@ def invoke(name, args):
     if name=='meetings_import':raise ValueError('File import is disabled in the synthetic preview; use the actual plugin.')
     raise ValueError('Unsupported demo tool')
 
-PAGE = '''<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Whisper Meetings · Demo</title><style>body{margin:0;background:#fff;font:12px system-ui}header{padding:10px 18px;background:#f5f5f5;color:#666}iframe{width:100%;height:calc(100vh - 38px);border:0;display:block}</style><header>PREVIEW · Синтетические данные · Микрофон не включается <button id="mode">Inline / Fullscreen</button><button id="theme">Light / Dark</button></header><iframe title="Whisper Meetings panel" src="/widget" sandbox="allow-scripts allow-same-origin"></iframe><script>
+PAGE = '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Whisper Meetings · Demo</title><style>body{margin:0;background:#fff;font:12px system-ui}header{padding:10px 18px;background:#f5f5f5;color:#666}iframe{width:100%;height:calc(100vh - 38px);border:0;display:block}</style><header>PREVIEW · Synthetic data · Microphone is not activated <button id="mode">Inline / Fullscreen</button><button id="theme">Light / Dark</button></header><iframe title="Whisper Meetings panel" src="/widget" sandbox="allow-scripts allow-same-origin"></iframe><script>
 const frame=document.querySelector('iframe');let mode='fullscreen',theme='light';document.querySelector('#mode').onclick=()=>{mode=mode==='fullscreen'?'inline':'fullscreen';frame.contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/host-context-changed',params:{displayMode:mode}},location.origin);};document.querySelector('#theme').onclick=()=>{theme=theme==='light'?'dark':'light';frame.contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/host-context-changed',params:{theme}},location.origin);};
 window.addEventListener('message',async event=>{
  if(event.source!==frame.contentWindow || event.origin!==location.origin)return;
  const msg=event.data;if(!msg || msg.jsonrpc!=='2.0' || msg.id===undefined)return;
  let result;
  try {
- if(msg.method==='ui/initialize')result={protocolVersion:msg.params.protocolVersion,hostInfo:{name:'Synthetic Preview Host',version:'0.3.0'},hostCapabilities:{serverTools:{},message:{text:{}},logging:{}},hostContext:{theme:'light',locale:'ru-RU',displayMode:'fullscreen',availableDisplayModes:['inline','fullscreen'],platform:'desktop'}};
+ if(msg.method==='ui/initialize')result={protocolVersion:msg.params.protocolVersion,hostInfo:{name:'Synthetic Preview Host',version:'0.4.1'},hostCapabilities:{serverTools:{},message:{text:{}},logging:{}},hostContext:{theme:'light',locale:'ru-RU',displayMode:'fullscreen',availableDisplayModes:['inline','fullscreen'],platform:'desktop'}};
  else if(msg.method==='ui/request-display-mode')result={mode:msg.params.mode};
  else if(msg.method==='tools/call'){const response=await fetch('/rpc',{method:'POST',headers:{'Content-Type':'application/json','X-Preview-Token':'TOKEN'},body:JSON.stringify(msg.params)});result=await response.json();}
- else if(msg.method==='ui/message'){await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json','X-Preview-Token':'TOKEN'},body:JSON.stringify(msg.params)});result={};document.querySelector('header').textContent='PREVIEW · Запрос получен тестовым хостом · Отправки в Codex нет';}
+ else if(msg.method==='ui/message'){await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json','X-Preview-Token':'TOKEN'},body:JSON.stringify(msg.params)});result={};document.querySelector('header').textContent='PREVIEW · Request received by test host · No message sent to Codex';}
  else result={};
  frame.contentWindow.postMessage({jsonrpc:'2.0',id:msg.id,result},location.origin);
  }catch(error){frame.contentWindow.postMessage({jsonrpc:'2.0',id:msg.id,error:{code:-32603,message:error.message}},location.origin);}

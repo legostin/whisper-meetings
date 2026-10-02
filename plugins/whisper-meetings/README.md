@@ -2,7 +2,7 @@
 
 Local microphone recording (plus Mac audio when headphones are confirmed), offline Whisper transcription, and an MCP Apps meeting workspace for Codex. Optional Calendar/Meet event binding uses minimal metadata explicitly supplied by the user or host. Current-agent analysis and cross-chat delivery depend on host capabilities.
 
-This is an independent macOS 15+ project, not an official OpenAI, Apple, Google or Zoom product. Version 0.4.0 is a prerelease; see the repository's validation notes for tested behavior and limitations.
+This is an independent macOS 15+ project, not an official OpenAI, Apple, Google or Zoom product. Version 0.4.1 is a prerelease; see the repository's validation notes for tested behavior and limitations.
 
 ## Setup
 
@@ -34,3 +34,5 @@ Full installation, development and validation: [repository](https://github.com/l
 [Privacy policy](PRIVACY.md) · [Usage terms](TERMS.md) · [Support](https://github.com/legostin/whisper-meetings/issues).
 
 Reports use a short opening and themed bullet sections, followed by decisions, tasks, risks and open questions. Recording links and segment IDs are omitted from the UI and human-readable reports; evidence metadata remains in structured JSON. `scripts/refresh_reports.py` reformats existing local Markdown reports without modifying their JSON or audio.
+
+The interface is currently English only. Speech language is independent: automatic detection, Russian and English remain available. Analysis requests use the requested report language or otherwise the transcript language; existing reports are preserved.

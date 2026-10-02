@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 — 2026-10-02
+
+- English-only interface and install listing; removed Russian interface copy and RU/EN switch.
+- Automatic, Russian and English speech recognition remain available.
+- Report requests follow the requested language or the transcript language independently of the interface. Existing reports are preserved.
+
 ## 0.4.0 — 2026-10-01
 
 - Unchecked headphones checkbox defaults new recordings to microphone only through AVAudioEngine; headphones enable microphone + Mac playback. The source choice is frozen while recording.

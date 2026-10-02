@@ -1,6 +1,6 @@
 # OpenAI compatibility and directory status
 
-Checked October 1, 2026. This document describes implemented protocol compatibility. It is not a declaration of OpenAI approval or legal certification.
+Checked October 2, 2026. This document describes implemented protocol compatibility. It is not a declaration of OpenAI approval or legal certification.
 
 ## Implemented
 
@@ -12,6 +12,7 @@ Checked October 1, 2026. This document describes implemented protocol compatibil
 | Standard UI | MCP Apps SDK, `ui://` HTML resource, `text/html;profile=mcp-app`, `ui.resourceUri`; no external UI dependencies at runtime. |
 | OpenAI surfaces | Official `openai/ui.entrypoints` global/thread metadata on the panel-opening tool. Rendering depends on each host's support. |
 | Display modes | Compact inline card has two actions and no tabs/nested navigation. Fullscreen contains the multi-step workspace. Uses the shared bridge to request display mode. |
+| Interface language | English only; no UI language switch or Russian listing translation. Speech language and saved meeting content remain independent. |
 | Theme/accessibility | Host style variables and native font stack, host light/dark changes, responsive layout, keyboard tab navigation, visible focus, labelled inputs and status/error regions. |
 | Network boundary | Empty UI connect/resource domain lists. Audio/model processing is local. No public recorder endpoint or covert cloud audio upload. |
 | Optional speaker processing | Explicit setup downloads pinned public model/SDK revisions without account credentials. Inference loads local Core ML files; speaker labels are estimates scoped to the meeting/channel, aliases are user supplied, overlap/uncertainty is retained, embeddings are not persisted. No hidden model download or identity claims. |

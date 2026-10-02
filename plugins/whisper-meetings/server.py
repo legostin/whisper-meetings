@@ -26,7 +26,7 @@ def meetings_panel() -> str:
           annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
 def meetings_open_panel() -> dict:
     """Open the interactive Whisper Meetings panel. Opening it does not start recording or send meeting text to the model."""
-    return {"version": "0.4.0", "panel": PANEL_URI}
+    return {"version": "0.4.1", "panel": PANEL_URI}
 
 
 @mcp.tool(meta={"ui": {"visibility": ["app"]}},

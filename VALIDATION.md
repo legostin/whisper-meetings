@@ -1,8 +1,10 @@
-# Verification — Whisper Meetings 0.4.0
+# Verification — Whisper Meetings 0.4.1
 
-Checked October 1, 2026 on Apple Silicon macOS. Scope and evidence are separated below; no directory approval or live-call recording success is claimed.
+Checked October 2, 2026 on Apple Silicon macOS. Scope and evidence are separated below; no directory approval or live-call recording success is claimed.
 
 ## Passed
+
+- **0.4.1 English interface**: English HTML and control labels, no RU/EN switch or Russian listing translation; Automatic/Russian/English speech choices retained. SDK preview initialized even with a Russian host locale; simulated start/stop, default English meeting title, fullscreen/inline controls and existing Russian transcript display passed. Current official manifest/MCP validation and all 50 Python tests pass. This change does not add live-device or production-host evidence.
 
 - **0.4 source selection/report regression checks**: default microphone-only state, headphones-to-native-command propagation, readable overview/legacy summary, removed inline references in display/Markdown/handoff, and retained validated JSON evidence. Native `capture --test-microphone-sink` writes 4800 generated PCM frames into a valid 48 kHz WAV and microphone-only stats; no input device is opened. Native release build and diagnostics pass. Actual AVAudioEngine microphone-device capture remains unverified.
 
